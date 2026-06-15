@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="inema-course" content="arquitetura-intencao">
+  <title>Dia 3 — O Sistema: de intenção a resultado | Arquitetura de Intenção · INEMA.CLUB</title>
+
+  <!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+  <script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+  <link rel="stylesheet" href="assets/learn.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+  <script type="application/json" data-inema-manifest>
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" }
+      ]}
+    ]
+  }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+</head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen">
+
+  <a href="#conteudo" class="skip">Pular para o conteúdo</a>
+
+  <!-- NAVIGATION (identico em todas as paginas) -->
+  <nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-14">
+        <div class="flex items-center space-x-3">
+          <a href="index.html" class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300">
+            <span class="text-2xl">🎯</span>
+            <span class="font-bold text-lg hidden sm:inline">Arquitetura de Intenção</span>
+          </a>
+          <span class="text-neutral-600 hidden sm:inline">|</span>
+          <a href="https://inema.club" target="_blank" rel="noopener" class="text-sky-400 hover:text-sky-300 text-sm font-medium">INEMA.CLUB</a>
+        </div>
+        <div class="flex items-center space-x-1 sm:space-x-2">
+          <a href="index.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">Início</a>
+          <a href="dia-1.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Dia 1</span></a>
+          <a href="dia-2.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Dia 2</span></a>
+          <a href="dia-3.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Dia 3</span></a>
+
+          <button type="button" data-inema-journey-open class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" title="Minha jornada">
+            <span aria-hidden="true">◷</span><span class="hidden sm:inline">Jornada</span>
+            <span class="inema-journey-badge hidden" data-inema-journey-badge data-count="0" aria-hidden="true"></span>
+          </button>
+          <button type="button" data-inema-appearance-toggle="[data-inema-appearance]" aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" title="Aparência e leitura">
+            <span aria-hidden="true">◑</span><span class="hidden sm:inline">Aparência</span>
+          </button>
+          <button id="theme-toggle" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" title="Alternar claro/escuro" aria-label="Alternar claro/escuro">
+            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-neutral-300" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-neutral-300" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+    <div data-inema-appearance class="inema-appearance-pop" role="dialog" aria-label="Aparência e leitura">
+      <div class="inema-segment"><span class="inema-segment-label">Tema</span>
+        <button data-inema-set-theme="inema-dark">Escuro</button>
+        <button data-inema-set-theme="claro">Claro</button>
+        <button data-inema-set-theme="sepia">Sépia</button>
+        <button data-inema-set-theme="foco">Foco</button>
+        <button data-inema-set-theme="contraste">Alto contraste</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Fonte</span>
+        <button data-inema-set-font="inter">Inter</button>
+        <button data-inema-set-font="system">Sistema</button>
+        <button data-inema-set-font="leitura">Leitura</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Tamanho</span>
+        <button data-inema-set-fontscale="100">A</button>
+        <button data-inema-set-fontscale="112">A+</button>
+        <button data-inema-set-fontscale="125">A++</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Largura</span>
+        <button data-inema-set-linewidth="60">Estreito</button>
+        <button data-inema-set-linewidth="68">Médio</button>
+        <button data-inema-set-linewidth="75">Largo</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Entrelinha</span>
+        <button data-inema-set-leading="1.45">Compacto</button>
+        <button data-inema-set-leading="1.7">Confortável</button>
+      </div>
+      <div class="inema-accent-grid" aria-label="Cor de acento">
+        <button data-inema-set-accent="emerald" title="Esmeralda"></button>
+        <button data-inema-set-accent="blue" title="Azul"></button>
+        <button data-inema-set-accent="purple" title="Roxo"></button>
+        <button data-inema-set-accent="amber" title="Âmbar"></button>
+        <button data-inema-set-accent="teal" title="Teal"></button>
+        <button data-inema-set-accent="rose" title="Rosa"></button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="conteudo">
+
+    <!-- BREADCRUMB -->
+    <nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2"><div class="flex items-center gap-2 text-sm text-neutral-400"><a href="index.html" class="hover:text-amber-400">Início</a><span>/</span><span class="text-amber-400">Dia 3</span></div></nav>
+
+    <!-- HEADER -->
+    <header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-4">DIA 3</span>
+        <h1 class="text-3xl sm:text-4xl font-bold mb-3">⚙️ O Sistema: de intenção a resultado confiável</h1>
+        <p class="text-lg text-neutral-400 max-w-3xl inema-prose">Montar e operar: como cinco pilares preenchidos viram um sistema que entrega resultados confiáveis, repetíveis e alinhados — e sobrevive à troca de ferramenta.</p>
+        <p class="text-base text-neutral-300 max-w-3xl mt-4 inema-prose">Nos dias 1 e 2 você mapeou sua posição na pirâmide e desenhou o Canvas dos 5 pilares. Hoje o Canvas sai do papel e vira sistema. A diferença entre um documento bonito e um sistema operacional é uma só: o sistema <strong class="text-amber-400">roda</strong>, é <strong class="text-amber-400">validado</strong> e <strong class="text-amber-400">melhora</strong> com o uso. Você vai montar, rodar pela primeira vez, validar contra critérios objetivos e instalar o loop de melhoria contínua. No fim, você terá seu 1º sistema de Arquitetura de Intenção funcionando — não um prompt bonito, mas um ambiente de informação que transforma intenção em resultado.</p>
+        <!-- objetivos de aprendizagem -->
+        <div class="mt-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Transformar os 5 pilares do Canvas em um sistema que roda de ponta a ponta, e não em um prompt isolado.</span></div>
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Entender como frameworks, fluxos, agentes e memória se encaixam como engrenagens de um mesmo mecanismo.</span></div>
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Operar o ciclo rodar → validar → ajustar → melhorar como rotina de qualidade, e não como ato único.</span></div>
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Separar a lógica (que persiste) da ferramenta (que muda), para usar qualquer modelo melhor que a média.</span></div>
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Reconhecer onde um sistema vira valor real: assistente, processo, produto ou sistema de decisão.</span></div>
+          <div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Montar, rodar e validar seu 1º sistema completo, com plano de melhoria contínua documentado.</span></div>
+        </div>
+        <!-- stats grid -->
+        <div class="grid grid-cols-4 gap-4 mt-8 max-w-2xl">
+          <div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">6</div><div class="text-xs text-neutral-400">Tópicos</div></div>
+          <div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">~100</div><div class="text-xs text-neutral-400">Minutos</div></div>
+          <div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Aplicação</div><div class="text-xs text-neutral-400">Nível</div></div>
+          <div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Projeto</div><div class="text-xs text-neutral-400">Tipo</div></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+
+        <!-- TOC -->
+        <nav data-inema-toc aria-label="Índice do dia" class="hidden lg:block sticky top-24 self-start text-sm">
+          <p class="text-neutral-400 mb-2">Seção <span data-inema-section-counter></span></p>
+          <ol class="space-y-1">
+            <li><a href="#topico-1" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">1. De peças a sistema</a></li>
+            <li><a href="#topico-2" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">2. As engrenagens</a></li>
+            <li><a href="#topico-3" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">3. O ciclo de operação</a></li>
+            <li><a href="#topico-4" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">4. Acima das ferramentas</a></li>
+            <li><a href="#topico-5" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">5. Onde isso vira valor</a></li>
+            <li><a href="#topico-6" class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400">6. Projeto final</a></li>
+          </ol>
+        </nav>
+
+        <!-- CONTEUDO -->
+        <div>
+
+          <!-- medidor do modulo -->
+          <div data-inema-meter="modulo:1-3" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso do dia" class="mb-10">
+            <div class="flex justify-between text-sm mb-1.5">
+              <span class="inema-meter-label" data-inema-meter-frac>0 de 6</span>
+              <span class="text-amber-400 font-semibold" data-inema-meter-pct>0%</span>
+            </div>
+            <div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill></div></div>
+          </div>
+
+          <article data-inema-module="1-3" data-inema-track="1">
+
+            <!-- ====================== TOPICO 1 ====================== -->
+            <section id="topico-1" data-inema-topic="modulo-1-3#topico-1" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">1</span>
+                  <h2 class="text-2xl font-bold">🧩 De peças a sistema</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t1-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Imagine cinco peças de um motor espalhadas na bancada: o pistão, a vela, o virabrequim, o tanque e o velocímetro. Cada peça é perfeita, mas o carro não anda. O Canvas do dia 2 te deu as cinco peças certas — Contexto, Objetivos, Regras, Memória, Validação. Hoje você as monta de um jeito que liga o motor. Um sistema não é a soma das peças: é o arranjo que faz a intenção virar resultado de forma repetível.</p>
+                <p data-inema-block="m1-3-t1-p2" class="text-neutral-300 mb-4 leading-relaxed">Um <strong class="text-amber-400">prompt bonito</strong> é um disparo único. Você escreve, a IA responde, e a qualidade depende da sua inspiração naquele momento. Funciona uma vez, falha na seguinte, e ninguém sabe por quê. Isso é improviso — não é sistema.</p>
+                <p data-inema-block="m1-3-t1-p3" class="text-neutral-300 mb-4 leading-relaxed">Um sistema é um <strong class="text-amber-400">ambiente de informação</strong>. Antes de você pedir qualquer coisa, a IA já SABE quem ela é, o que precisa entregar, o que pode e o que não pode fazer, o que aprendeu antes e como o resultado será conferido. O pedido vira a parte pequena; o ambiente faz o trabalho pesado.</p>
+                <p data-inema-block="m1-3-t1-p4" class="text-neutral-300 mb-4 leading-relaxed">A chave da <strong class="text-amber-400">repetibilidade</strong> é esta: o que garante a qualidade não pode morar na sua cabeça. Se a regra de tom, o objetivo e o critério de aceite só existem quando você lembra de digitá-los, o sistema é você — e você não escala nem dorme. Quando isso vira ambiente persistente, qualquer execução, em qualquer dia, parte do mesmo chão.</p>
+                <p data-inema-block="m1-3-t1-p5" class="text-neutral-300 mb-4 leading-relaxed">Os 5 pilares só viram sistema quando se conectam numa <strong class="text-amber-400">cadeia</strong>: Intenção → Contexto → Processo → Resultado. O Contexto e a Memória alimentam; os Objetivos e as Regras orientam e limitam; a Validação fecha o ciclo dizendo se deu certo. Tire um elo e o sistema vira de novo um prompt com sorte.</p>
+                <p data-inema-block="m1-3-t1-p6" class="text-neutral-300 mb-4 leading-relaxed">O teste para saber se você tem um sistema é brutalmente simples: outra pessoa (ou você daqui a um mês) consegue rodar e chegar a um resultado equivalente, sem você explicar nada ao vivo? Se sim, é sistema. Se depende de você narrar o contexto toda vez, ainda são <strong class="text-amber-400">peças soltas</strong>.</p>
+                <p data-inema-block="m1-3-t1-p7" class="text-neutral-300 mb-4 leading-relaxed">Repetível, confiável e alinhado são as três provas. <strong class="text-amber-400">Repetível</strong>: roda de novo e dá resultado parecido. <strong class="text-amber-400">Confiável</strong>: o resultado passa nos critérios, não só agrada aos olhos. <strong class="text-amber-400">Alinhado</strong>: bate com o objetivo e respeita as regras do negócio. Sistema é o que entrega os três ao mesmo tempo.</p>
+              </div>
+
+              <!-- SVG A -->
+              <div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+                <svg viewBox="0 0 1000 290" class="w-full h-auto" role="img" aria-label="Os cinco pilares deixam de ser peças soltas e se montam num Sistema de Intenção, que produz um resultado confiável, repetível e alinhado.">
+                  <defs>
+                    <linearGradient id="d3a-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+                    <filter id="d3a-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <pattern id="d3a-grid" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1.3" cy="1.3" r="1.3" fill="#f59e0b" opacity="0.10"/></pattern>
+                    <marker id="d3a-ahc" markerWidth="9" markerHeight="9" refX="6.5" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#38bdf8"/></marker>
+                    <marker id="d3a-ah" markerWidth="10" markerHeight="10" refX="6.5" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"/></marker>
+                  </defs>
+                  <rect x="0" y="0" width="1000" height="290" fill="url(#d3a-grid)"/>
+
+                  <!-- 5 pecas -->
+                  <g font-family="Inter,sans-serif" font-size="12" font-weight="600">
+                    <rect x="40" y="44" width="172" height="32" rx="8" fill="#0e1b26" stroke="#38bdf8" stroke-width="2"/><text x="126" y="65" text-anchor="middle" fill="#bfe6ff">Contexto</text>
+                    <rect x="40" y="86" width="172" height="32" rx="8" fill="#0e1b26" stroke="#38bdf8" stroke-width="2"/><text x="126" y="107" text-anchor="middle" fill="#bfe6ff">Objetivos</text>
+                    <rect x="40" y="128" width="172" height="32" rx="8" fill="#0e1b26" stroke="#38bdf8" stroke-width="2"/><text x="126" y="149" text-anchor="middle" fill="#bfe6ff">Regras</text>
+                    <rect x="40" y="170" width="172" height="32" rx="8" fill="#0e1b26" stroke="#38bdf8" stroke-width="2"/><text x="126" y="191" text-anchor="middle" fill="#bfe6ff">Memória</text>
+                    <rect x="40" y="212" width="172" height="32" rx="8" fill="#0e1b26" stroke="#38bdf8" stroke-width="2"/><text x="126" y="233" text-anchor="middle" fill="#bfe6ff">Validação</text>
+                  </g>
+                  <g fill="none" stroke="#38bdf8" stroke-width="1.8" opacity="0.55">
+                    <path d="M212,60 C320,60 330,130 426,138" marker-end="url(#d3a-ahc)"/>
+                    <path d="M212,102 C320,102 340,135 426,142" marker-end="url(#d3a-ahc)"/>
+                    <path d="M212,144 L426,144" marker-end="url(#d3a-ahc)"/>
+                    <path d="M212,186 C320,186 340,153 426,146" marker-end="url(#d3a-ahc)"/>
+                    <path d="M212,228 C320,228 330,158 426,150" marker-end="url(#d3a-ahc)"/>
+                  </g>
+
+                  <!-- sistema -->
+                  <g filter="url(#d3a-glow)"><rect x="430" y="86" width="252" height="118" rx="16" fill="url(#d3a-grad)" stroke="#f59e0b" stroke-width="2.5"/></g>
+                  <text x="556" y="138" text-anchor="middle" fill="#231400" font-family="Inter,sans-serif" font-size="18" font-weight="700">Sistema de</text>
+                  <text x="556" y="162" text-anchor="middle" fill="#231400" font-family="Inter,sans-serif" font-size="18" font-weight="700">Intenção</text>
+
+                  <line x1="682" y1="145" x2="724" y2="145" stroke="#fbbf24" stroke-width="2" opacity="0.8" marker-end="url(#d3a-ah)"/>
+
+                  <!-- resultado -->
+                  <rect x="728" y="92" width="232" height="106" rx="14" fill="#1f1604" stroke="#fbbf24" stroke-width="2"/>
+                  <text x="844" y="132" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="15" font-weight="700">Resultado</text>
+                  <text x="844" y="155" text-anchor="middle" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11">confiável · repetível</text>
+                  <text x="844" y="172" text-anchor="middle" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11">· alinhado</text>
+                </svg>
+                <p class="text-xs text-neutral-500 mt-3 text-center">Peças soltas não entregam. Montadas num sistema, sim.</p>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Atendimento ao cliente: prompt solto vs. sistema</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">Pequeno negócio quer usar IA para responder clientes no WhatsApp.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">Responda os clientes da minha loja de forma simpática e resolva as dúvidas deles.</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">CONTEXTO: Loja de suplementos, ticket médio R$ 120, entrega em 5 dias úteis, política de troca em 7 dias. OBJETIVO: resolver a dúvida na 1ª resposta sempre que possível; sucesso = cliente não precisa repetir a pergunta. REGRAS: nunca prometer prazo menor que 5 dias; nunca dar desconto sem aprovação; se a dúvida for sobre reembolso, encaminhar para humano. MEMÓRIA: as 10 dúvidas mais frequentes e as respostas aprovadas. VALIDAÇÃO: toda resposta deve citar prazo correto, tom cordial e, se não souber, dizer que vai verificar — nunca inventar.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> O prompt solto entrega tom, mas não controla prazo, desconto nem reembolso — cada resposta é uma roleta. A versão sistema fixa o que é sucesso, o que é proibido e como conferir, então roda igual com qualquer atendente ou em qualquer dia. Vira repetível, confiável e alinhado.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Escrever os 5 pilares num lugar persistente que a IA leia a cada execução (system prompt, documento de contexto, base de conhecimento).</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Conectar os pilares numa cadeia explícita: o que alimenta, o que orienta, o que limita, o que valida.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Aplicar o teste do terceiro antes de dizer pronto.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Tratar o pedido do dia como se fosse o sistema — o pedido é a ponta, não o motor.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Deixar regra ou objetivo só na sua cabeça e digitar de memória toda vez.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Achar que um prompt longo e bonito já é um sistema; sem validação e sem persistência, continua sendo disparo único.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Faça o teste do envelope: escreva seu sistema, feche o computador e peça para outra pessoa rodar só com o que está escrito. Tudo que ela tiver que te perguntar é um pilar que ainda mora na sua cabeça — e que precisa virar texto.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Ambiente, não disparo</h4><p class="text-xs text-neutral-400">Sistema é o ambiente de informação que existe ANTES do pedido. O prompt vira a parte pequena; o ambiente carrega o peso da qualidade.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">A qualidade sai da sua cabeça</h4><p class="text-xs text-neutral-400">Regras, objetivo e critério precisam estar escritos e persistentes. Se só existem quando você lembra, o sistema é você — e você não escala.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">A cadeia liga as peças</h4><p class="text-xs text-neutral-400">Intenção → Contexto → Processo → Resultado. Os 5 pilares só viram sistema quando se conectam nessa cadeia; tire um elo e volta a ser sorte.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Teste do terceiro</h4><p class="text-xs text-neutral-400">Se outra pessoa roda e chega a resultado equivalente sem você explicar ao vivo, é sistema. Se depende de você narrar, ainda são peças soltas.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- ====================== TOPICO 2 ====================== -->
+            <section id="topico-2" data-inema-topic="modulo-1-3#topico-2" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">2</span>
+                  <h2 class="text-2xl font-bold">⚙️ As engrenagens</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t2-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Se o sistema é um motor, as engrenagens têm nome. Framework é o desenho do motor. Fluxo é a ordem em que as peças se movem. Agente é a peça que age sozinha dentro do fluxo. Memória é o que o motor lembra entre uma volta e outra. Você não precisa programar nenhuma delas para entender como se encaixam — e quem entende o encaixe escolhe melhor as ferramentas.</p>
+                <p data-inema-block="m1-3-t2-p2" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Framework</strong> é a estrutura de pensamento que organiza o sistema. Os 5 pilares são um framework. A cadeia Intenção → Contexto → Processo → Resultado é outro. Framework não é ferramenta: é o molde mental que diz o que precisa existir e em que ordem. Troque a ferramenta, o framework continua de pé.</p>
+                <p data-inema-block="m1-3-t2-p3" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Fluxo</strong> é a sequência de etapas que leva da intenção ao resultado. Ex.: recebe a mensagem do cliente → classifica o tipo de dúvida → busca a resposta aprovada na memória → redige → valida contra as regras → envia ou escala para humano. O fluxo transforma um pedido vago numa linha de produção com etapas nomeadas.</p>
+                <p data-inema-block="m1-3-t2-p4" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Agente</strong> é a parte do sistema que executa em ciclos sem você operar cada passo: ele escreve, testa, vê o erro, corrige e entrega. No dia 1 isso era a camada 3 da pirâmide. Dentro de um sistema, o agente é uma engrenagem que roda um trecho do fluxo com autonomia — mas sempre dentro das regras e validada no fim.</p>
+                <p data-inema-block="m1-3-t2-p5" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Memória</strong> é o que persiste entre execuções: padrões aprovados, decisões anteriores, tom da marca, erros que não podem se repetir. Sem memória, todo dia é o primeiro dia e a IA reaprende do zero. Com memória, o sistema fica melhor a cada volta porque carrega o que já funcionou.</p>
+                <p data-inema-block="m1-3-t2-p6" class="text-neutral-300 mb-4 leading-relaxed">O <strong class="text-amber-400">encaixe</strong> é este: o framework define o que existe, o fluxo define a ordem, o agente executa os trechos autônomos e a memória alimenta tudo com o que já se sabe. Você desenha o framework e o fluxo; decide onde cabe um agente; e escolhe o que vai para a memória. As ferramentas só preenchem esses papéis.</p>
+                <p data-inema-block="m1-3-t2-p7" class="text-neutral-300 mb-4 leading-relaxed">Nem todo sistema precisa de agente. Um sistema de geração de conteúdo pode ser framework + fluxo + memória, sem nenhuma autonomia em ciclo. Comece pelo <strong class="text-amber-400">mínimo</strong>: só adicione um agente quando uma etapa exigir iterar (tentar, errar, corrigir) sem você no meio. Complexidade é custo, não troféu.</p>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Conteúdo de marca: pedido vago vs. fluxo desenhado</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">Criadora quer um sistema que produza posts semanais no tom da marca dela.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">Me escreve 5 posts pra essa semana no meu estilo.</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">FRAMEWORK: 5 pilares. FLUXO: (1) puxar o tema da semana e o objetivo de cada post; (2) buscar na MEMÓRIA o guia de voz e 3 posts que performaram; (3) redigir o rascunho seguindo o guia; (4) VALIDAR contra checklist (tom, gancho nos 2 primeiros segundos, 1 CTA, sem jargão proibido); (5) marcar os que passam e devolver os reprovados com o motivo. AGENTE: na etapa 3-4, iterar até o rascunho passar no checklist ou após 2 tentativas escalar para a criadora.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> O pedido vago entrega 5 textos genéricos que você reescreve do zero. O fluxo desenhado nomeia cada etapa, puxa a memória de voz, valida contra critérios e só usa autonomia onde faz sentido (iterar o rascunho). O resultado chega validado, no tom, e melhora porque a memória guarda o que performou.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Desenhar o fluxo como uma sequência de etapas nomeadas antes de pensar em qualquer ferramenta.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Decidir conscientemente o que entra na memória — padrões aprovados e erros a não repetir.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Colocar agente só nas etapas que exigem iterar sem você no meio.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confundir framework (molde mental) com ferramenta (o app que você abre).</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Empilhar agentes e integrações por status; complexidade sem necessidade é custo e ponto de falha.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Rodar sem memória e reclamar que a IA esquece tudo — você não deu a ela o que lembrar.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Desenhe seu fluxo em caixas numeradas numa folha antes de abrir qualquer app. Para cada caixa, pergunte: precisa de memória aqui? precisa iterar aqui (agente)? qual a regra que limita? Essa folha vale mais que a escolha da ferramenta.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Framework = o molde mental</h4><p class="text-xs text-neutral-400">A estrutura que diz o que precisa existir e em que ordem. Os 5 pilares são um framework. Independe de ferramenta — troque a tool, ele fica de pé.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Fluxo = a linha de produção</h4><p class="text-xs text-neutral-400">A sequência nomeada de etapas da intenção ao resultado: receber → classificar → buscar → redigir → validar → entregar. Transforma pedido vago em processo.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Agente = autonomia em ciclo</h4><p class="text-xs text-neutral-400">A engrenagem que escreve, testa, corrige e entrega sozinha um trecho do fluxo. Sempre dentro das regras e validada no fim. Use só quando a etapa exige iterar.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Memória = o que persiste</h4><p class="text-xs text-neutral-400">Padrões, decisões e erros que não podem se repetir. Sem ela, todo dia é o primeiro dia. Com ela, o sistema melhora a cada volta.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- ====================== TOPICO 3 ====================== -->
+            <section id="topico-3" data-inema-topic="modulo-1-3#topico-3" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">3</span>
+                  <h2 class="text-2xl font-bold">🔄 O ciclo de operação</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t3-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Sistema bom não nasce pronto — nasce rodável. A primeira versão sempre tem furos; a diferença de quem opera de verdade é ter um loop que transforma cada furo em melhoria. Rodar, validar, ajustar, melhorar não é um passo a passo que você faz uma vez: é a rotina que mantém o sistema vivo e cada vez mais confiável.</p>
+                <p data-inema-block="m1-3-t3-p2" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Rodar</strong> é executar o sistema com um caso real, não hipotético. Pegue uma mensagem de cliente de verdade, um tema de post real, uma decisão concreta que você precisa tomar. Caso real expõe os furos que o caso ideal esconde.</p>
+                <p data-inema-block="m1-3-t3-p3" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Validar</strong> é conferir o resultado contra os critérios que você definiu no pilar Validação — não contra seu gosto do momento. Critério é objetivo: citou o prazo correto? respeitou a regra de desconto? bateu com o objetivo? Validação sem critério escrito vira ilusão de produtividade: parece bom, mas você não sabe se é.</p>
+                <p data-inema-block="m1-3-t3-p4" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Ajustar</strong> é corrigir a CAUSA, não o sintoma. Se a IA prometeu prazo errado, não reescreva a resposta na mão — conserte a regra ou o contexto que deixou o erro passar. Ajuste de sintoma você refaz toda vez; ajuste de causa conserta para sempre.</p>
+                <p data-inema-block="m1-3-t3-p5" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Melhorar</strong> é elevar o teto do sistema, não só tapar buraco. Você notou que as 3 dúvidas mais comuns sempre escalam para humano? Adicione respostas aprovadas para elas na memória. Melhoria contínua é o que faz o sistema da semana 10 ser melhor que o da semana 1, sem refazer do zero.</p>
+                <p data-inema-block="m1-3-t3-p6" class="text-neutral-300 mb-4 leading-relaxed">O loop fecha sobre si mesmo: cada rodada validada gera um aprendizado, o aprendizado vira ajuste de causa ou melhoria de memória, e a próxima rodada já parte de um <strong class="text-amber-400">patamar mais alto</strong>. É assim que o sistema acumula qualidade em vez de só repetir.</p>
+                <p data-inema-block="m1-3-t3-p7" class="text-neutral-300 mb-4 leading-relaxed">Duas armadilhas matam o loop. A primeira é <strong class="text-amber-400">não validar</strong>: você roda, gosta, segue — e nunca descobre os erros silenciosos. A segunda é <strong class="text-amber-400">validar sem registrar</strong>: você acha o furo, conserta na mão, e ele volta na semana seguinte porque a causa nunca virou regra. Registre o aprendizado ou ele se perde.</p>
+              </div>
+
+              <!-- SVG B -->
+              <div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+                <svg viewBox="0 0 1000 340" class="w-full h-auto" role="img" aria-label="O ciclo de operação de um sistema de intenção: rodar, depois validar, depois ajustar, depois melhorar — e voltar a rodar, num laço contínuo de qualidade.">
+                  <defs>
+                    <linearGradient id="d3b-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+                    <filter id="d3b-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <pattern id="d3b-grid" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1.3" cy="1.3" r="1.3" fill="#f59e0b" opacity="0.10"/></pattern>
+                    <marker id="d3b-ahc" markerWidth="10" markerHeight="10" refX="6.5" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#38bdf8"/></marker>
+                  </defs>
+                  <rect x="0" y="0" width="1000" height="340" fill="url(#d3b-grid)"/>
+
+                  <!-- setas circulares (sentido horario) -->
+                  <g fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.6">
+                    <path d="M590,86 C700,92 770,118 800,150" marker-end="url(#d3b-ahc)"/>
+                    <path d="M806,200 C786,250 720,272 612,266" marker-end="url(#d3b-ahc)"/>
+                    <path d="M388,268 C280,272 214,250 194,200" marker-end="url(#d3b-ahc)"/>
+                    <path d="M200,150 C230,118 300,92 410,86" marker-end="url(#d3b-ahc)"/>
+                  </g>
+
+                  <!-- centro -->
+                  <circle cx="500" cy="170" r="56" fill="#1f1604" stroke="#fbbf24" stroke-width="1.5" opacity="0.5"/>
+                  <text x="500" y="165" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="13" font-weight="700">ciclo de</text>
+                  <text x="500" y="184" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="13" font-weight="700">operação</text>
+
+                  <!-- nós -->
+                  <g filter="url(#d3b-glow)"><rect x="415" y="48" width="170" height="58" rx="13" fill="url(#d3b-grad)" stroke="#f59e0b" stroke-width="2.5"/></g>
+                  <text x="500" y="83" text-anchor="middle" fill="#231400" font-family="Inter,sans-serif" font-size="16" font-weight="700">1 · Rodar</text>
+
+                  <rect x="725" y="142" width="170" height="58" rx="13" fill="#1f1604" stroke="#fbbf24" stroke-width="2"/>
+                  <text x="810" y="177" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600">2 · Validar</text>
+
+                  <rect x="415" y="236" width="170" height="58" rx="13" fill="#1f1604" stroke="#fbbf24" stroke-width="2"/>
+                  <text x="500" y="271" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600">3 · Ajustar</text>
+
+                  <rect x="105" y="142" width="170" height="58" rx="13" fill="#1f1604" stroke="#fbbf24" stroke-width="2"/>
+                  <text x="190" y="177" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600">4 · Melhorar</text>
+                </svg>
+                <p class="text-xs text-neutral-500 mt-3 text-center">Um sistema não é entregue pronto: ele roda, valida, ajusta e melhora — sempre.</p>
+              </div>
+
+              <!-- TIMELINE do ciclo (variedade) -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">O loop, passo a passo</h3>
+              <div class="space-y-0 mb-6">
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">1</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-6"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Rodar com caso real</h4><p class="text-sm text-neutral-400">Execute com uma mensagem, tema ou decisão de verdade. O caso ideal esconde furos; o caso real expõe. Sistema se prova rodando, não no slide.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">2</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-6"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Validar contra critério</h4><p class="text-sm text-neutral-400">Confira o resultado contra os critérios escritos no pilar Validação, não contra o gosto do momento. Sem critério objetivo, validar vira ilusão.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">3</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-6"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Ajustar a causa</h4><p class="text-sm text-neutral-400">Erro recorrente se conserta na regra ou no contexto, não reescrevendo a saída na mão. Sintoma você refaz sempre; causa você conserta uma vez.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">4</span>
+                  </div>
+                  <div class="pb-2"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Melhorar e re-rodar</h4><p class="text-sm text-neutral-400">Além de tapar buracos, adicione à memória o que funciona — e volte ao passo 1 num patamar mais alto. É o que faz a semana 10 superar a semana 1.</p></div></div>
+                </div>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Correção na mão vs. ajuste de causa</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">O assistente de atendimento prometeu entrega em 3 dias, mas o prazo real é 5.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">O dono vê o erro, edita a resposta para o cliente trocando 3 por 5 e segue o dia. Na semana seguinte o mesmo erro aparece em outro cliente.</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">O dono registra o furo no log, identifica a CAUSA (o contexto não trazia o prazo padrão e a IA chutou), adiciona ao Contexto "entrega = 5 dias úteis" e cria a Regra "nunca prometer prazo menor que o padrão"; adiciona um item de Validação "confere prazo". Roda de novo com o mesmo caso: passa. O erro não volta.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> A correção na mão resolve um cliente e deixa a causa intacta — o erro é estrutural e vai repetir. O ajuste de causa muda o sistema: vira regra, vira critério de validação, e some de vez. Um esforço, problema encerrado, sistema mais confiável.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Rodar sempre o primeiro teste com um caso real do seu dia, nunca com exemplo perfeito.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Validar com a checklist do pilar Validação na frente, item por item.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Registrar todo furo num log curto: o que falhou, qual a causa, qual o ajuste — e re-rodar o mesmo caso para confirmar.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Rodar, gostar e seguir sem validar — é assim que os erros silenciosos sobrevivem.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Corrigir o sintoma na mão e não tocar na causa; o erro volta com cara nova.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Tratar o loop como evento único de lançamento, e não como rotina semanal.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Adote a regra do mesmo caso: depois de ajustar a causa, re-rode exatamente o caso que falhou. Se passar, o ajuste foi de causa. Se ainda falha, você corrigiu sintoma. É o teste mais rápido para saber se a melhoria foi real.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rodar com caso real</h4><p class="text-xs text-neutral-400">Execute com mensagem, tema ou decisão de verdade. O caso ideal esconde furos; o caso real expõe. Sistema se prova rodando, não no slide.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Validar contra critério, não gosto</h4><p class="text-xs text-neutral-400">Confira o resultado contra os critérios escritos no pilar Validação. Sem critério objetivo, validar vira ilusão de produtividade — parece bom, você não sabe se é.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Ajustar a causa, não o sintoma</h4><p class="text-xs text-neutral-400">Erro recorrente se conserta na regra ou no contexto, não reescrevendo a saída na mão. Sintoma você refaz sempre; causa você conserta uma vez.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Melhorar eleva o teto</h4><p class="text-xs text-neutral-400">Além de tapar buracos, adicione à memória o que funciona. É o que faz o sistema da semana 10 ser melhor que o da semana 1 sem refazer do zero.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- ====================== TOPICO 4 ====================== -->
+            <section id="topico-4" data-inema-topic="modulo-1-3#topico-4" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">4</span>
+                  <h2 class="text-2xl font-bold">🧭 Acima das ferramentas</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t4-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Ferramentas mudam de nome a cada trimestre. O modelo de hoje é substituído pelo de amanhã; o app que você ama some ou muda o preço. Quem aprendeu só a clicar na ferramenta recomeça do zero a cada troca. Quem aprendeu a lógica — os 5 pilares, a cadeia, o loop — carrega tudo para a ferramenta nova e ainda a usa melhor que a média.</p>
+                <p data-inema-block="m1-3-t4-p2" class="text-neutral-300 mb-4 leading-relaxed">A <strong class="text-amber-400">lógica</strong> é o que não muda: você sempre vai precisar de contexto, objetivo, regras, memória e validação, em qualquer ferramenta, com qualquer modelo. Isso é da natureza do problema, não do software. Por isso a Arquitetura de Intenção é durável — ela vive uma camada acima da tool.</p>
+                <p data-inema-block="m1-3-t4-p3" class="text-neutral-300 mb-4 leading-relaxed">A <strong class="text-amber-400">ferramenta</strong> é só a implementação da lógica. Onde você escreve o contexto, como guarda a memória, qual botão dispara o fluxo — isso varia. Mas se você sabe O QUE precisa existir, descobrir ONDE colocar em uma ferramenta nova leva minutos, não meses.</p>
+                <p data-inema-block="m1-3-t4-p4" class="text-neutral-300 mb-4 leading-relaxed">Isso muda quem manda na relação. O <strong class="text-amber-400">usuário raso</strong> é refém da tool: espera o tutorial, copia o prompt mágico, e trava quando a interface muda. O arquiteto chega na ferramenta nova com o sistema na cabeça e pergunta apenas onde encaixar cada pilar. A ferramenta serve a ele, não o contrário.</p>
+                <p data-inema-block="m1-3-t4-p5" class="text-neutral-300 mb-4 leading-relaxed">O foco do dia 1 dizia: na Arquitetura de Intenção, o foco sai do agente e vai para o sistema que orienta o agente. Aqui isso se completa — o foco também sai da ferramenta e vai para a lógica que orienta qualquer ferramenta. É a mesma <strong class="text-amber-400">subida de altitude</strong>.</p>
+                <p data-inema-block="m1-3-t4-p6" class="text-neutral-300 mb-4 leading-relaxed">Na prática, documente seu sistema de forma independente de ferramenta: os 5 pilares em texto puro, o fluxo em caixas numeradas, os critérios de validação em checklist. Esse <strong class="text-amber-400">documento é portátil</strong>. Migrar de uma ferramenta para outra vira copiar e adaptar, não recomeçar.</p>
+                <p data-inema-block="m1-3-t4-p7" class="text-neutral-300 mb-4 leading-relaxed">O teste de portabilidade é direto: se sua ferramenta sumisse amanhã, quanto do seu sistema sobreviveria? Se a resposta for quase tudo, você tem lógica. Se for quase nada, você só tinha <strong class="text-amber-400">cliques decorados</strong> — e está a uma atualização de distância de perder tudo.</p>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Refém da tool vs. dono da lógica</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">A ferramenta de IA que a equipe usava encerrou o plano gratuito; precisam migrar.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">A equipe só tinha uma coleção de prompts colados naquela ferramenta específica e um fluxo de cliques memorizado. Na migração, perderam o contexto, recomeçaram os testes do zero e levaram semanas para voltar ao nível anterior — sem saber por que algumas coisas voltaram a falhar.</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">A equipe tinha o sistema documentado: 5 pilares em um doc, fluxo em caixas numeradas, checklist de validação. Na ferramenta nova, mapearam onde cada pilar entrava (contexto no system, memória numa base, validação como checklist humano), rodaram os mesmos casos de teste de sempre e em um dia estavam validados e operando.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> Quem só tinha cliques decorados estava a uma atualização de perder tudo — a tool era o sistema. Quem tinha a lógica documentada tratou a troca como reimplementação rápida, porque o que importa (o que precisa existir) já estava escrito e era portátil. A lógica sobrevive; os cliques não.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Documentar o sistema em formato independente de ferramenta: pilares em texto, fluxo em caixas, validação em checklist.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ao avaliar uma ferramenta nova, perguntar onde cada pilar se encaixa — não como ela é usada.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Manter um conjunto fixo de casos de teste para re-validar o sistema em qualquer ferramenta.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Decorar prompts mágicos amarrados a uma interface específica.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Tratar a troca de ferramenta como recomeço; com lógica documentada, é reimplementação rápida.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confundir saber clicar na tool com entender o sistema — são camadas diferentes.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Faça o teste do desaparecimento: se sua ferramenta principal sumisse amanhã, quanto do seu sistema sobreviveria? Anote a porcentagem honesta. Tudo que você perderia é lógica que ainda está presa na ferramenta e precisa virar documento portátil.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">A lógica é da natureza do problema</h4><p class="text-xs text-neutral-400">Contexto, objetivo, regras, memória e validação são exigidos por qualquer ferramenta e qualquer modelo. Não são do software — são do problema. Por isso duram.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Ferramenta é implementação</h4><p class="text-xs text-neutral-400">Onde escrever, como guardar, qual botão apertar — só varia a forma. Se você sabe O QUE precisa existir, achar ONDE numa tool nova leva minutos.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Quem entende a lógica manda</h4><p class="text-xs text-neutral-400">O usuário raso é refém do tutorial e trava quando a interface muda. O arquiteto chega na tool nova e só pergunta onde encaixar cada pilar.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Documento portátil</h4><p class="text-xs text-neutral-400">5 pilares em texto, fluxo em caixas, validação em checklist — independente de ferramenta. Migrar vira copiar e adaptar, não recomeçar do zero.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- ====================== TOPICO 5 ====================== -->
+            <section id="topico-5" data-inema-topic="modulo-1-3#topico-5" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">5</span>
+                  <h2 class="text-2xl font-bold">💎 Onde isso vira valor</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t5-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Arquitetura de Intenção não é teoria de quadro branco — ela vira coisa que gera receita, economiza tempo ou reduz risco. Há quatro formas concretas de um sistema virar valor, e a mesma lógica dos 5 pilares serve as quatro. Saber qual delas você está construindo deixa o foco do projeto nítido desde o primeiro dia.</p>
+                <p data-inema-block="m1-3-t5-p2" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Assistente especializado</strong> é um sistema que faz uma coisa muito bem para um contexto específico: o assistente de atendimento da sua loja, o copiloto jurídico que revisa contratos no seu padrão, o assistente de RH que triagem currículos pelos seus critérios. O valor é profundidade — ele sabe o seu negócio, não o mundo.</p>
+                <p data-inema-block="m1-3-t5-p3" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Processo automatizado</strong> é um sistema que roda uma cadeia de tarefas de ponta a ponta com pouca intervenção: receber pedido → gerar resposta → validar → registrar → notificar. O valor é tempo e consistência — o que tomava horas manuais roda sozinho, igual toda vez, dentro das regras.</p>
+                <p data-inema-block="m1-3-t5-p4" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Produto digital</strong> é um sistema que você empacota e entrega a outras pessoas: um app, uma ferramenta interna que vira externa, um serviço que clientes usam. O valor é escala — o sistema atende muitos sem o seu esforço por atendimento. Aqui validação e regras viram ainda mais críticas, porque o erro chega ao cliente final.</p>
+                <p data-inema-block="m1-3-t5-p5" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Sistema de decisão</strong> é um sistema que organiza informação para você (ou seu time) decidir melhor: analisa cenários, compara opções contra critérios, sinaliza riscos. O valor é qualidade de decisão e redução de risco. Não decide por você — estrutura a decisão para que ela seja consistente e fundamentada.</p>
+                <p data-inema-block="m1-3-t5-p6" class="text-neutral-300 mb-4 leading-relaxed">A <strong class="text-amber-400">mesma lógica</strong> serve as quatro. Em todas, você precisa de contexto (o que a IA sabe), objetivo (o que é sucesso), regras (limites), memória (o que persiste) e validação (como saber se está certo). Muda o empacotamento e quem consome o resultado — não os pilares.</p>
+                <p data-inema-block="m1-3-t5-p7" class="text-neutral-300 mb-4 leading-relaxed">Nomear o tipo desde o início afia o projeto. Um assistente especializado prioriza profundidade de contexto e memória; um produto digital prioriza regras e validação à prova de erro; um processo automatizado prioriza o fluxo e a validação automática; um sistema de decisão prioriza objetivos e critérios de comparação. <strong class="text-amber-400">Saber o tipo é saber onde concentrar esforço.</strong></p>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Mesmo problema, quatro formas de valor</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">Uma clínica usa IA para lidar com triagem e agendamento de pacientes.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">"Vou usar IA pra ajudar na clínica." (sem definir o tipo de sistema, o projeto vira um amontoado de prompts sem foco, sem critério de pronto e sem dono do resultado.)</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">Quatro recortes claros: (1) ASSISTENTE ESPECIALIZADO — copiloto que responde dúvidas dos pacientes no padrão da clínica; foco em contexto e memória. (2) PROCESSO AUTOMATIZADO — fluxo que confirma consultas, reagenda faltas e registra no sistema; foco em fluxo e validação. (3) PRODUTO DIGITAL — portal de autoatendimento que outras clínicas assinam; foco em regras e validação à prova de erro. (4) SISTEMA DE DECISÃO — painel que prioriza a fila por urgência segundo critérios clínicos; foco em objetivos e critérios. Cada um vira um projeto com pronto definido.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> O recorte vago não tem onde concentrar esforço nem como saber se ficou pronto. Nomear o tipo afia o projeto: define qual pilar pesa mais, qual o critério de sucesso e quem consome o resultado. Mesma lógica de 5 pilares, quatro formas concretas de virar valor.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Nomear desde o início qual dos quatro tipos você está construindo.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Concentrar esforço no pilar que aquele tipo mais exige (contexto, fluxo, regras ou objetivos).</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Definir explicitamente quem consome o resultado e o que é pronto para esse consumidor.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Começar a construir sem decidir o tipo — vira amontoado de prompts sem foco.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Tratar um produto digital com o rigor de um rascunho interno; o erro chega ao cliente.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Esperar que um sistema de decisão decida por você; ele estrutura a decisão, não a substitui.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Antes de montar, complete a frase: "Estou construindo um [tipo] que entrega [resultado] para [quem], e estará pronto quando [critério]." Se você não consegue preencher os quatro colchetes, ainda não sabe o que está construindo — e o projeto vai derivar.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Assistente especializado</h4><p class="text-xs text-neutral-400">Faz uma coisa muito bem para um contexto específico. Valor = profundidade: ele sabe o seu negócio, não o mundo. Prioriza contexto e memória.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Processo automatizado</h4><p class="text-xs text-neutral-400">Roda uma cadeia de tarefas de ponta a ponta com pouca intervenção. Valor = tempo e consistência. Prioriza o fluxo e a validação automática.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Produto digital</h4><p class="text-xs text-neutral-400">Sistema empacotado e entregue a terceiros. Valor = escala. Regras e validação viram críticas, porque o erro chega ao cliente final.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Sistema de decisão</h4><p class="text-xs text-neutral-400">Organiza informação para decidir melhor — compara opções, sinaliza riscos. Valor = qualidade de decisão e menos risco. Prioriza objetivos e critérios.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- ====================== TOPICO 6 ====================== -->
+            <section id="topico-6" data-inema-topic="modulo-1-3#topico-6" class="mb-16">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">6</span>
+                  <h2 class="text-2xl font-bold">🏁 Projeto final</h2>
+                </div>
+                <button type="button" data-inema-doubt-toggle aria-pressed="false" title="Marcar dúvida neste tópico" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tenho dúvida</span></button>
+              </div>
+              <div class="inema-prose">
+                <p data-inema-block="m1-3-t6-p1" class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base">Chegou a hora de ligar o motor. Você vai pegar o Canvas dos 5 pilares do dia 2 e transformá-lo num sistema que roda de verdade: definir os componentes, montar o fluxo, rodar com um caso real, validar contra a checklist e escrever seu plano de melhoria contínua. No fim deste tópico você não terá aprendido sobre Arquitetura de Intenção — você terá um sistema seu funcionando.</p>
+                <p data-inema-block="m1-3-t6-p2" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 1 — Traduza o Canvas em Ficha do Sistema.</strong> Pegue os 5 pilares do dia 2 e preencha a Ficha do Sistema (template de hoje): componentes, fluxo, critérios de validação e plano de melhoria. O Canvas era o desenho; a Ficha é o sistema operacional.</p>
+                <p data-inema-block="m1-3-t6-p3" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 2 — Defina os componentes.</strong> Liste o que compõe o sistema: onde mora o contexto, o que está na memória, quais são as regras ativas, qual o objetivo e quem consome o resultado. Cada componente precisa ter um lugar concreto, não uma intenção vaga.</p>
+                <p data-inema-block="m1-3-t6-p4" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 3 — Monte o fluxo.</strong> Escreva a sequência de etapas em caixas numeradas: da entrada (o pedido/caso) até a saída validada. Marque onde a memória é consultada, onde há autonomia (agente) e onde a validação acontece.</p>
+                <p data-inema-block="m1-3-t6-p5" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 4 — Rode com um caso real.</strong> Escolha um caso verdadeiro do seu dia e execute o sistema ponta a ponta. Anote o que saiu. Caso real, não ideal — é o teste honesto.</p>
+                <p data-inema-block="m1-3-t6-p6" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 5 — Valide contra a checklist.</strong> Confira o resultado item por item nos critérios de validação. Marque passou ou reprovou em cada um. Não vale gosto: vale critério.</p>
+                <p data-inema-block="m1-3-t6-p7" class="text-neutral-300 mb-4 leading-relaxed"><strong class="text-amber-400">Passo 6 — Escreva o plano de melhoria contínua.</strong> Registre os furos encontrados, a causa de cada um, o ajuste, e a cadência de revisão (ex.: revisar o log toda sexta). Esse plano é o que mantém o sistema vivo. Com a Ficha preenchida, o caso rodado, a validação feita e o plano escrito, você concluiu o curso: tem um sistema de Arquitetura de Intenção montado, rodado e com loop de melhoria instalado.</p>
+              </div>
+
+              <!-- TIMELINE dos 6 passos -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Os 6 passos para ligar o motor</h3>
+              <div class="space-y-0 mb-6">
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">1</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-5"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Traduza o Canvas em Ficha</h4><p class="text-sm text-neutral-400">Os 5 pilares do dia 2 viram componentes, fluxo, critérios e plano. O Canvas era o desenho; a Ficha é o operacional.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">2</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-5"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Defina os componentes</h4><p class="text-sm text-neutral-400">Onde mora o contexto, o que está na memória, quais regras estão ativas, qual o objetivo, quem consome. Cada um com lugar concreto.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">3</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-5"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Monte o fluxo</h4><p class="text-sm text-neutral-400">Da entrada à saída validada, em caixas numeradas. Marque memória, agente e validação em cada etapa.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">4</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-5"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Rode com um caso real</h4><p class="text-sm text-neutral-400">Um caso verdadeiro do seu dia, ponta a ponta. Anote o que saiu. Caso real, não ideal — é o teste honesto.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">5</span>
+                    <span class="w-px flex-1 bg-dark-600 my-1"></span>
+                  </div>
+                  <div class="pb-5"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Valide contra a checklist</h4><p class="text-sm text-neutral-400">Item por item nos critérios. Marque passou ou reprovou em cada um. Não vale gosto: vale critério.</p></div></div>
+                </div>
+                <div class="flex gap-4">
+                  <div class="flex flex-col items-center">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">6</span>
+                  </div>
+                  <div class="pb-2"><div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold mb-1">Escreva o plano de melhoria</h4><p class="text-sm text-neutral-400">Furos, causas, ajustes e cadência de revisão. Com isso escrito, você concluiu o curso: sistema montado, rodado e com loop instalado.</p></div></div>
+                </div>
+              </div>
+
+              <!-- exemplo pronto -->
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Exemplo pronto — Entrega final: Canvas vago vs. sistema rodado</h3>
+                <p class="text-sm text-neutral-400 italic mb-3">Aluno quer concluir o curso com um sistema de atendimento ao cliente real.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-red-400 mb-2">✗ Frágil</h4>
+                    <p class="text-sm text-neutral-300">Tenho o Canvas preenchido com os 5 pilares anotados e um prompt grande pronto. (mas nunca rodou com um caso real, nunca validou, e não tem plano de melhoria — é desenho, não sistema.)</p>
+                  </div>
+                  <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                    <h4 class="font-semibold text-emerald-400 mb-2">✓ Estruturado</h4>
+                    <p class="text-sm text-neutral-300">FICHA preenchida: componentes definidos (contexto no system, 10 dúvidas na memória, 4 regras ativas, objetivo de resolver na 1ª resposta). FLUXO em 5 caixas. RODOU com 3 mensagens reais de clientes. VALIDOU contra 6 critérios — 2 reprovaram (prazo errado, escalou demais). AJUSTOU as causas (regra de prazo + resposta de reembolso na memória), re-rodou e passou. PLANO: revisar log toda sexta, meta de reduzir escalonamento em 20% no mês.</p>
+                  </div>
+                </div>
+                <p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por que muda:</strong> O Canvas vago tem todas as peças mas nunca ligou o motor — não se sabe se funciona. A Ficha rodada provou o sistema com casos reais, achou e consertou furos na causa, e instalou o loop de melhoria. Um é promessa; o outro é um sistema operacional confiável, repetível e alinhado. É isso que conclui o curso.</p>
+              </div>
+
+              <!-- fazer / evitar -->
+              <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-emerald-400 mb-3">✓ O que FAZER</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Traduzir o Canvas do dia 2 na Ficha do Sistema antes de qualquer execução.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Rodar obrigatoriamente com 2-3 casos reais e validar cada um contra a checklist.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ajustar as causas dos furos, re-rodar o mesmo caso e só então declarar pronto.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Escrever o plano de melhoria com causa, ajuste e cadência de revisão.</span></li>
+                  </ul>
+                </div>
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+                  <h4 class="font-semibold text-red-400 mb-3">✗ O que EVITAR</h4>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Declarar o sistema pronto sem nunca ter rodado um caso real.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Validar pelo gosto em vez da checklist de critérios.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Sair sem plano de melhoria — o sistema congela na primeira versão.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Corrigir furos só na saída e não na causa; o erro volta na semana seguinte.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- dica -->
+              <div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+                <h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Dica prática</h3>
+                <p class="text-neutral-300 text-sm">Seu certificado real não é o PDF — é a Ficha preenchida com pelo menos um caso rodado, validado e com furo corrigido na causa. Guarde essa Ficha: ela é o seu primeiro sistema e o molde para todos os próximos. Toda nova ideia de IA, você começa preenchendo uma Ficha.</p>
+              </div>
+
+              <!-- conceitos-chave -->
+              <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceitos-chave</h3>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Do Canvas à Ficha</h4><p class="text-xs text-neutral-400">O Canvas do dia 2 era o desenho; a Ficha do Sistema é o operacional. Traduzir um no outro é o que tira a intenção do papel e a coloca para rodar.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Componente tem lugar concreto</h4><p class="text-xs text-neutral-400">Cada pilar vira um componente com endereço real: onde mora o contexto, o que está na memória, quais regras estão ativas. Intenção vaga não roda.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rodar com caso real fecha o curso</h4><p class="text-xs text-neutral-400">O sistema só está provado quando processa um caso verdadeiro de ponta a ponta e passa na validação. Caso ideal não conta.</p></div>
+                <div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Plano de melhoria mantém vivo</h4><p class="text-xs text-neutral-400">Furos, causas, ajustes e cadência de revisão por escrito. Sem o plano, o sistema congela na v1; com ele, melhora a cada semana.</p></div>
+              </div>
+
+              <div class="flex justify-start mt-7">
+                <button type="button" data-inema-read-toggle aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold">
+                  <span class="inema-ico-todo" aria-hidden="true">○</span><span class="inema-ico-done" aria-hidden="true">●</span>
+                  <span class="inema-label-todo">Marcar como lido</span><span class="inema-label-done">Lido</span>
+                </button>
+              </div>
+            </section>
+
+          </article>
+
+          <!-- ====================== EXERCICIOS ====================== -->
+          <section class="mb-14">
+            <h2 class="text-2xl font-bold mb-2">🛠️ Exercícios práticos</h2>
+            <p class="text-neutral-400 mb-6 inema-prose">Faça com o seu caso real. O gabarito é exemplo, não gabarito único.</p>
+
+            <div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+              <h3 class="text-lg font-semibold mb-2">Exercício 1 — Prompt solto vira sistema</h3>
+              <p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Transformar um pedido improvisado num sistema com os 5 pilares conectados.</p>
+              <p class="text-neutral-300 mb-4">Pegue uma tarefa que você hoje resolve com um prompt solto e improvisado (atendimento, conteúdo, triagem, e-mail, resumo). Reescreva-a como sistema: preencha os 5 pilares (Contexto, Objetivos, Regras, Memória, Validação) e mostre a cadeia Intenção → Contexto → Processo → Resultado conectando-os. Aplique o teste do terceiro no fim.</p>
+              <ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+                <li>Escreva o prompt solto que você usa hoje, tal como é.</li>
+                <li>Liste o Contexto que a IA precisa saber e que hoje está só na sua cabeça.</li>
+                <li>Defina o Objetivo (o que é sucesso) e 2-3 Regras (limites e proibições).</li>
+                <li>Diga o que entra na Memória e escreva 3 critérios de Validação.</li>
+                <li>Aplique o teste do terceiro: outra pessoa rodaria só com o que está escrito?</li>
+              </ol>
+              <details class="mt-4 group">
+                <summary class="cursor-pointer text-amber-400 font-medium">Ver gabarito de exemplo</summary>
+                <div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">TAREFA: responder e-mails de orçamento de uma marcenaria.
+
+Prompt solto (antes): Responde esse cliente pedindo orçamento, de forma educada.
+
+SISTEMA (depois):
+CONTEXTO: Marcenaria sob medida, prazo de produção 30 dias, orçamento só após visita técnica, atende região metropolitana, não faz reparos pequenos.
+OBJETIVO: agendar a visita técnica. Sucesso = cliente sai com data de visita marcada ou ciente do próximo passo.
+REGRAS: nunca dar preço por e-mail sem visita; nunca prometer prazo menor que 30 dias; recusar com cordialidade pedidos de reparo.
+MEMÓRIA: modelo de resposta aprovado, lista de bairros atendidos, perguntas-padrão para qualificar (ambiente, medidas aproximadas, prazo desejado).
+VALIDAÇÃO: a resposta (1) propõe agendar visita, (2) não cita preço, (3) cita prazo correto de 30 dias, (4) tom cordial e objetivo.
+CADEIA: Intenção (converter lead) → Contexto (regras da marcenaria) → Processo (qualificar + propor visita) → Resultado (visita agendada).
+TESTE DO TERCEIRO: sim — um assistente novo responderia no padrão só com este documento, sem me perguntar nada.</div>
+              </details>
+              <p class="text-sm text-neutral-400 mt-4">💡 Dica: O atalho para achar o Contexto escondido é listar tudo que você corrigiria na resposta de um funcionário novo. Cada correção é um pedaço de contexto, regra ou objetivo que mora na sua cabeça e precisa virar texto.</p>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+              <h3 class="text-lg font-semibold mb-2">Exercício 2 — Desenhe o fluxo e posicione as engrenagens</h3>
+              <p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Montar o fluxo em etapas nomeadas e identificar onde entram memória, agente e validação.</p>
+              <p class="text-neutral-300 mb-4">Para o sistema do Exercício 1 (ou outro caso seu), desenhe o fluxo em caixas numeradas, da entrada à saída validada. Em cada etapa, marque: precisa de memória aqui? precisa de autonomia em ciclo (agente) aqui? qual a regra que limita? Justifique onde você NÃO colocou agente.</p>
+              <ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+                <li>Escreva a sequência de etapas como caixas numeradas, da entrada até a saída.</li>
+                <li>Marque em quais etapas a memória é consultada e o quê ela traz.</li>
+                <li>Identifique se alguma etapa exige iterar (tentar/errar/corrigir) — só aí cabe agente.</li>
+                <li>Aponte a regra que limita cada etapa crítica.</li>
+                <li>Justifique pelo menos uma etapa onde você decidiu NÃO usar agente.</li>
+              </ol>
+              <details class="mt-4 group">
+                <summary class="cursor-pointer text-amber-400 font-medium">Ver gabarito de exemplo</summary>
+                <div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">FLUXO — atendimento de orçamento da marcenaria:
+(1) RECEBER e-mail do cliente. Regra: não responder fora da região atendida sem avisar.
+(2) CLASSIFICAR o pedido (orçamento / reparo / outro). Memória: lista de bairros e tipos de serviço.
+(3) QUALIFICAR — montar as perguntas-padrão se faltam dados. Memória: perguntas aprovadas. Regra: não pedir preço-alvo.
+(4) REDIGIR a resposta propondo a visita. Memória: modelo aprovado e tom da marca. AGENTE aqui: iterar o rascunho até passar na validação ou após 2 tentativas escalar para o dono — porque a redação se beneficia de tentar/corrigir.
+(5) VALIDAR contra checklist (propõe visita / sem preço / prazo 30 dias / tom cordial).
+(6) ENVIAR se passou; ESCALAR para o dono se reprovou 2x.
+ONDE NÃO USEI AGENTE: na etapa 2 (classificar) — é uma decisão única e direta, não precisa iterar; autonomia em ciclo ali só adicionaria custo e ponto de falha.</div>
+              </details>
+              <p class="text-sm text-neutral-400 mt-4">💡 Dica: Use a regra do mínimo: comece sem nenhum agente e só adicione um onde a etapa realmente exige tentar, errar e corrigir sem você. Se a etapa é decisão única, fluxo simples resolve — agente ali é complexidade sem retorno.</p>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+              <h3 class="text-lg font-semibold mb-2">Exercício 3 — Rode, valide e ajuste a causa</h3>
+              <p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Operar o loop rodar → validar → ajustar → melhorar com um caso real e corrigir a causa, não o sintoma.</p>
+              <p class="text-neutral-300 mb-4">Rode seu sistema com um caso REAL do seu dia. Valide o resultado item por item contra sua checklist. Para cada item reprovado, identifique a CAUSA (qual pilar falhou) e escreva o ajuste estrutural. Depois re-rode o mesmo caso e confirme que passou (regra do mesmo caso).</p>
+              <ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+                <li>Escolha um caso real (uma mensagem, um pedido, uma decisão de verdade).</li>
+                <li>Rode o sistema e registre o resultado que saiu.</li>
+                <li>Valide item por item contra a checklist: passou ou reprovou em cada um.</li>
+                <li>Para cada reprovação, escreva a causa (qual pilar falhou) e o ajuste no pilar.</li>
+                <li>Re-rode o MESMO caso e confirme: passou? Se ainda falha, era sintoma — ajuste de novo.</li>
+              </ol>
+              <details class="mt-4 group">
+                <summary class="cursor-pointer text-amber-400 font-medium">Ver gabarito de exemplo</summary>
+                <div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">CASO REAL: e-mail "Quero um armário de cozinha, quanto custa e pra quando fica pronto? Moro no Centro."
+
+RESULTADO QUE SAIU: resposta cordial, propôs visita, MAS disse "fica pronto em cerca de 3 semanas" e não confirmou que o Centro é atendido.
+
+VALIDAÇÃO:
+- Propõe visita: PASSOU.
+- Sem preço: PASSOU.
+- Prazo correto (30 dias): REPROVOU (disse 3 semanas).
+- Tom cordial: PASSOU.
+- Confirma região: REPROVOU (não checou o bairro).
+
+CAUSAS E AJUSTES:
+- Prazo errado → causa: Contexto não fixava o prazo padrão → ajuste: adicionar ao Contexto "prazo de produção = 30 dias" e Regra "nunca prometer prazo menor que 30 dias".
+- Região não confirmada → causa: faltava etapa de checagem → ajuste: adicionar à etapa 2 do fluxo "confirmar bairro na lista atendida" e item de validação "confirma região".
+
+RE-RODAR (mesmo caso): a nova resposta cita prazo de 30 dias e confirma que o Centro é atendido antes de propor a visita. Passou em todos os 5 itens. Ajuste foi de causa.</div>
+              </details>
+              <p class="text-sm text-neutral-400 mt-4">💡 Dica: Se ao re-rodar o mesmo caso ele passa mas você desconfia que outro caso quebraria, crie uma pequena bateria de 3 casos reais variados e rode os três a cada ajuste. É o jeito barato de não trocar um furo por outro.</p>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+              <h3 class="text-lg font-semibold mb-2">Exercício 4 — Teste da portabilidade</h3>
+              <p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Separar o que no seu sistema é lógica durável do que é só clique preso à ferramenta.</p>
+              <p class="text-neutral-300 mb-4">Faça o teste do desaparecimento: imagine que sua ferramenta principal de IA some amanhã. Liste tudo do seu sistema que SOBREVIVERIA (lógica documentada) e tudo que se PERDERIA (cliques e prompts presos à tool). Para cada item perdido, escreva como transformá-lo em documento portátil.</p>
+              <ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+                <li>Liste os componentes do seu sistema hoje (onde está cada pilar, o fluxo, a validação).</li>
+                <li>Marque cada um como sobrevive (documentado/portátil) ou perde (preso à ferramenta).</li>
+                <li>Estime a porcentagem honesta que sobreviveria a uma troca de ferramenta.</li>
+                <li>Para cada item que se perderia, escreva a versão portátil (texto, caixas, checklist).</li>
+                <li>Guarde o resultado como o documento mestre independente de ferramenta.</li>
+              </ol>
+              <details class="mt-4 group">
+                <summary class="cursor-pointer text-amber-400 font-medium">Ver gabarito de exemplo</summary>
+                <div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">TESTE DO DESAPARECIMENTO — sistema de atendimento da marcenaria:
+
+SOBREVIVE (lógica documentada):
+- Os 5 pilares estão num doc em texto puro → portátil.
+- O fluxo está em 6 caixas numeradas → portátil.
+- A checklist de validação (5 critérios) está escrita → portátil.
+
+PERDE (preso à ferramenta):
+- O prompt estava montado dentro da interface da tool, sem cópia fora → PORTÁVEL: colar o texto do system prompt no doc mestre.
+- A memória (modelo de resposta, lista de bairros) estava só num campo da ferramenta → PORTÁVEL: exportar para um arquivo de memória em texto/planilha.
+- O agente da etapa 4 era uma automação configurada por cliques → PORTÁVEL: descrever a regra em palavras (iterar o rascunho até passar na validação ou 2 tentativas) para reconfigurar em qualquer tool.
+
+PORCENTAGEM HONESTA QUE SOBREVIVERIA: ~70%. Os 30% perdidos viram documento portátil com os ajustes acima → passa para ~100%.</div>
+              </details>
+              <p class="text-sm text-neutral-400 mt-4">💡 Dica: Mantenha um único doc mestre do sistema, independente de ferramenta, e trate a ferramenta como anexo descartável. Sempre que configurar algo dentro de uma tool, copie a lógica em palavras para o doc mestre — assim a portabilidade nunca cai abaixo de 90%.</p>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+              <h3 class="text-lg font-semibold mb-2">Exercício 5 — Ficha do Sistema completa (projeto final)</h3>
+              <p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Consolidar todo o aprendizado numa Ficha do Sistema preenchida, rodada, validada e com plano de melhoria.</p>
+              <p class="text-neutral-300 mb-4">Preencha a Ficha do Sistema completa para o seu caso (template do dia): componentes, fluxo, critérios de validação como checklist e plano de melhoria contínua. Rode com ao menos um caso real, registre a validação, ajuste a causa de pelo menos um furo e escreva a cadência de revisão. Esta é a sua entrega de conclusão do curso.</p>
+              <ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+                <li>Traduza seu Canvas do dia 2 nos componentes da Ficha (cada pilar com lugar concreto).</li>
+                <li>Monte o fluxo rodar → validar → ajustar → melhorar em etapas nomeadas.</li>
+                <li>Escreva a checklist de validação com 4-6 critérios objetivos.</li>
+                <li>Rode com 1-3 casos reais e registre o resultado de cada item da checklist.</li>
+                <li>Ajuste a causa de ao menos um furo, re-rode e confirme; escreva o plano de melhoria com cadência.</li>
+              </ol>
+              <details class="mt-4 group">
+                <summary class="cursor-pointer text-amber-400 font-medium">Ver gabarito de exemplo</summary>
+                <div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">FICHA DO SISTEMA — Assistente de atendimento da marcenaria
+
+TIPO: assistente especializado.
+COMPONENTES:
+- Contexto: marcenaria sob medida, prazo 30 dias, orçamento só após visita, região metropolitana (no system prompt).
+- Objetivo: agendar visita técnica; sucesso = data marcada ou próximo passo claro.
+- Regras: sem preço por e-mail; sem prazo menor que 30 dias; recusar reparos com cordialidade; confirmar região antes.
+- Memória: modelo aprovado, lista de bairros, perguntas de qualificação (arquivo de memória).
+- Validação: checklist abaixo.
+FLUXO: (1) receber → (2) classificar+confirmar região → (3) qualificar → (4) redigir [agente itera] → (5) validar → (6) enviar/escalar.
+CHECKLIST DE VALIDAÇÃO: [ ] propõe visita; [ ] sem preço; [ ] prazo 30 dias; [ ] confirma região; [ ] tom cordial; [ ] qualifica com 1-2 perguntas.
+RODADA (caso real, e-mail do Centro): reprovou em prazo e região na 1ª vez.
+AJUSTE DE CAUSA: prazo fixado no Contexto + regra; etapa de confirmação de região no fluxo. Re-rodou: passou nos 6 itens.
+PLANO DE MELHORIA: revisar o log de furos toda sexta; meta de reduzir escalonamento ao dono em 20% em 30 dias; adicionar à memória toda dúvida nova que aparecer 3+ vezes.
+STATUS: montado, rodado, validado, com loop instalado. Curso concluído.</div>
+              </details>
+              <p class="text-sm text-neutral-400 mt-4">💡 Dica: Não busque a Ficha perfeita na primeira passada — busque a Ficha que RODA. Uma Ficha com um furo já corrigido na causa vale mais que uma Ficha impecável que nunca processou um caso real. O critério de conclusão é ter ligado o motor, não ter o desenho mais bonito.</p>
+            </div>
+          </section>
+
+          <!-- ====================== TEMPLATE ====================== -->
+          <section class="mb-14">
+            <div class="bg-gradient-to-br from-amber-900/20 to-dark-800 rounded-xl border border-amber-500/30 p-6 sm:p-8">
+              <h2 class="text-2xl font-bold mb-2 flex items-center"><span class="mr-2">🧩</span>Ficha do Sistema + Checklist de Validação</h2>
+              <p class="text-neutral-300 mb-6 inema-prose">Do Canvas ao sistema operacional. Traduz os 5 pilares do dia 2 em componentes com lugar concreto, monta o fluxo rodar-validar-ajustar-melhorar e fixa os critérios de validação como checklist. Preencha um por caso real; a Ficha rodada e validada é a sua entrega de conclusão do curso.</p>
+              <div class="space-y-3">
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Nome do sistema</div><div class="text-neutral-300 text-sm">Exemplo: Assistente de atendimento da Marcenaria Cedro</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Tipo (assistente especializado / processo automatizado / produto digital / sistema de decisão)</div><div class="text-neutral-300 text-sm">Exemplo: Assistente especializado</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Resultado e consumidor (entrega o quê, para quem)</div><div class="text-neutral-300 text-sm">Exemplo: Entrega respostas de orçamento que agendam visita técnica, para clientes que chegam por e-mail</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Componente Contexto (o que sabe e onde mora)</div><div class="text-neutral-300 text-sm">Exemplo: Marcenaria sob medida, prazo 30 dias, orçamento só após visita, região metropolitana — fixado no system prompt</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Componente Objetivos (o que é sucesso)</div><div class="text-neutral-300 text-sm">Exemplo: Agendar a visita técnica; sucesso = cliente com data marcada ou próximo passo claro</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Componente Regras (limites ativos)</div><div class="text-neutral-300 text-sm">Exemplo: Sem preço por e-mail; sem prazo menor que 30 dias; recusar reparos com cordialidade; confirmar região antes de propor visita</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Componente Memória (o que persiste)</div><div class="text-neutral-300 text-sm">Exemplo: Modelo de resposta aprovado, lista de bairros atendidos, perguntas de qualificação — em arquivo de memória</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Fluxo em etapas numeradas (com agente/validação marcados)</div><div class="text-neutral-300 text-sm">Exemplo: 1) receber; 2) classificar+confirmar região; 3) qualificar; 4) redigir [agente itera ate passar/2x]; 5) validar; 6) enviar ou escalar</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Checklist de Validação (4-6 critérios objetivos)</div><div class="text-neutral-300 text-sm">Exemplo: [ ] propoe visita; [ ] sem preço; [ ] prazo 30 dias; [ ] confirma região; [ ] tom cordial; [ ] qualifica com 1-2 perguntas</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Rodada com caso real (caso usado e resultado da validação)</div><div class="text-neutral-300 text-sm">Exemplo: E-mail do Centro: reprovou em prazo (disse 3 semanas) e região (não confirmou) na 1ª vez</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Ajuste de causa (qual pilar falhou e o que mudou)</div><div class="text-neutral-300 text-sm">Exemplo: Causa: Contexto sem prazo padrão e fluxo sem checagem de região. Ajuste: prazo+regra no Contexto e etapa de confirmação de região. Re-rodou: passou nos 6 itens</div></div>
+                <div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Plano de melhoria contínua (cadência e meta)</div><div class="text-neutral-300 text-sm">Exemplo: Revisar log de furos toda sexta; reduzir escalonamento ao dono em 20% em 30 dias; adicionar à memória toda dúvida que repetir 3+ vezes</div></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ====================== CHECAGEM ====================== -->
+          <section class="mb-14">
+            <div data-inema-check="modulo-1-3#q1" class="inema-check bg-dark-800 border border-dark-600 rounded-xl p-6">
+              <p class="font-medium mb-4">No ciclo de operação, o que diferencia ajustar a causa de corrigir o sintoma?</p>
+              <div class="inema-check-options space-y-2">
+                <button type="button" data-inema-check-option="0" class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm">Ajustar a causa é reescrever a saída na mão toda vez que o erro aparece</button>
+                <button type="button" data-inema-check-option="1" class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm">Ajustar a causa é mudar o pilar (regra, contexto, memória) que deixou o erro passar, para que ele não volte</button>
+                <button type="button" data-inema-check-option="2" class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm">Corrigir o sintoma é sempre mais eficiente porque resolve na hora</button>
+                <button type="button" data-inema-check-option="3" class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm">Ajustar a causa só vale para sistemas com agentes autônomos</button>
+              </div>
+              <div data-inema-check-feedback class="mt-4 text-sm" role="status" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <!-- ====================== FACILITADOR ====================== -->
+          <section class="mb-14">
+            <details class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+              <summary class="cursor-pointer font-semibold text-neutral-200">🎓 Para facilitar ao vivo (modo presencial)</summary>
+              <div class="mt-4 space-y-3 text-sm text-neutral-300">
+                <p><strong class="text-amber-400">Tempo total:</strong> 120 min.</p>
+                <p><strong class="text-amber-400">Dinâmica:</strong> Oficina "Liga o Motor" em trios. Abertura (15 min): o facilitador mostra ao vivo um prompt solto falhando e o mesmo caso como sistema, conectando à pirâmide do dia 1 e ao Canvas do dia 2. Bloco 1 — Montagem (30 min): cada participante traduz seu Canvas na Ficha do Sistema (componentes + fluxo). Bloco 2 — Rodada cruzada (35 min): dentro do trio, cada um roda o sistema do colega da esquerda com um caso real que esse colega fornece, e valida contra a checklist dele — o dono do sistema NÃO defende, só anota os furos (teste do terceiro na prática). Bloco 3 — Ajuste de causa (25 min): cada um corrige a causa de pelo menos um furo encontrado, re-roda o mesmo caso e confirma. Fechamento (15 min): cada trio apresenta um furo que virou ajuste estrutural e escreve a cadência do plano de melhoria. Encerramento do curso com a entrega da Ficha como certificado real.</p>
+                <p><strong class="text-amber-400">Materiais:</strong> Folhas A3 com a Ficha do Sistema impressa (1 por participante); blocos de post-its de 2 cores (amarelo = furo, verde = ajuste); canetão; Canvas do dia 2 preenchido (pré-requisito); acesso a uma ferramenta de IA por trio; cronômetro visível; mural para os planos de melhoria.</p>
+                <div>
+                  <p class="font-semibold text-neutral-200 mb-2">Perguntas de debate:</p>
+                  <ul class="list-disc list-inside space-y-1.5 text-neutral-300">
+                    <li>Qual pilar mais falhou quando outra pessoa rodou o seu sistema — e por que ele estava fraco?</li>
+                    <li>Dos furos que apareceram, quantos eram de causa (estrutura) e quantos de sintoma (saída)? O que isso diz do seu sistema?</li>
+                    <li>Se a ferramenta que você usou hoje sumisse amanhã, quanto da sua Ficha sobreviveria? Onde a lógica ainda está presa à tool?</li>
+                    <li>Qual dos quatro tipos de valor (assistente, processo, produto, decisão) o seu sistema é — e você concentrou esforço no pilar certo para esse tipo?</li>
+                    <li>Qual será a sua cadência de revisão real depois do curso, e o que vai te fazer NÃO cumprir? Como blindar isso?</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </section>
+
+          <!-- ====================== RESUMO ====================== -->
+          <section class="mb-8">
+            <div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-xl border border-amber-500/30 p-8">
+              <h2 class="text-2xl font-bold mb-6 flex items-center"><span class="mr-3">✅</span>Resumo do Dia 3</h2>
+              <ul class="space-y-3 text-neutral-200 mb-7">
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Sistema não é prompt bonito: é um ambiente de informação que existe antes do pedido e tira a qualidade da sua cabeça, tornando o resultado repetível, confiável e alinhado.</span></li>
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>As engrenagens têm papéis claros: framework é o molde mental, fluxo é a linha de produção, agente é a autonomia em ciclo e memória é o que persiste — use agente só onde a etapa exige iterar.</span></li>
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>O loop rodar → validar → ajustar → melhorar é rotina, não evento: rode com caso real, valide contra critério, ajuste a causa (não o sintoma) e melhore a memória; re-rode o mesmo caso para confirmar.</span></li>
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>A lógica sobrevive à troca de ferramenta — documente os 5 pilares em texto, o fluxo em caixas e a validação em checklist, e você usa qualquer tool melhor que a média.</span></li>
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Sistemas viram valor em quatro formas — assistente especializado, processo automatizado, produto digital e sistema de decisão — e nomear o tipo afia onde concentrar esforço.</span></li>
+                <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>O certificado real é a Ficha do Sistema preenchida, rodada com caso real, validada e com pelo menos um furo corrigido na causa, mais o plano de melhoria contínua.</span></li>
+              </ul>
+              <div class="bg-dark-900/50 rounded-lg border border-amber-500/20 p-5 mb-7">
+                <h3 class="font-semibold text-amber-400 mb-2">Próximo:</h3>
+                <p class="text-sm text-neutral-300">Você concluiu a imersão. Daqui em diante, toda nova ideia de IA começa do mesmo jeito: preencha uma Ficha do Sistema, rode com um caso real, valide contra critérios e instale o loop de melhoria. Pegue um segundo caso do seu trabalho nos próximos 7 dias e repita o ciclo — a segunda Ficha sai em metade do tempo, e é aí que a Arquitetura de Intenção deixa de ser curso e vira o seu jeito de operar.</p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-4">
+                <a href="dia-2.html" class="text-center px-6 py-3 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors">← Dia 2</a>
+                <a href="index.html" class="text-center px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors">Concluir a imersão ✓</a>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-dark-600 py-8 mt-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+      <p>Arquitetura de Intenção — uma imersão <a href="https://inema.club" target="_blank" rel="noopener" class="text-sky-400 hover:text-sky-300">INEMA.CLUB</a> · 2026</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS: nucleo v1 -->
+  <script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+
+  <!-- Camada de aprendizagem v2 -->
+  <script src="assets/learn.js"></script>
+  <script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+    if (window.INEMA && INEMA.registerCheck) INEMA.registerCheck('modulo-1-3#q1', {
+      answer: 1,
+      explain: {
+        0: 'Errado — reescrever a saída na mão é justamente corrigir o sintoma; o erro estrutural permanece e volta na próxima execução.',
+        1: 'Correto — ajustar a causa muda o pilar que falhou (a regra, o contexto, a memória), então o erro deixa de acontecer de vez. Re-rodar o mesmo caso confirma se foi causa ou sintoma.',
+        2: 'Errado — corrigir o sintoma resolve um caso e deixa a causa intacta; o erro repete e o custo total é maior, não menor.',
+        3: 'Errado — ajuste de causa vale para qualquer sistema, com ou sem agente; é sobre mudar a estrutura (pilares), não sobre autonomia.'
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="inema-course" content="arquitetura-intencao">
+  <title>Arquitetura de Intenção | Imersão de 3 dias · INEMA.CLUB</title>
+
+  <!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+  <script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+  <link rel="stylesheet" href="assets/learn.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+  <script type="application/json" data-inema-manifest>
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" }
+      ]}
+    ]
+  }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+</head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen">
+
+  <a href="#conteudo" class="skip">Pular para o conteúdo</a>
+
+  <!-- NAVIGATION (identico em todas as paginas) -->
+  <nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-14">
+        <div class="flex items-center space-x-3">
+          <a href="index.html" class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300">
+            <span class="text-2xl">🎯</span>
+            <span class="font-bold text-lg hidden sm:inline">Arquitetura de Intenção</span>
+          </a>
+          <span class="text-neutral-600 hidden sm:inline">|</span>
+          <a href="https://inema.club" target="_blank" rel="noopener" class="text-sky-400 hover:text-sky-300 text-sm font-medium">INEMA.CLUB</a>
+        </div>
+        <div class="flex items-center space-x-1 sm:space-x-2">
+          <a href="index.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10">Início</a>
+          <a href="dia-1.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Dia 1</span></a>
+          <a href="dia-2.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Dia 2</span></a>
+          <a href="dia-3.html" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Dia 3</span></a>
+
+          <button type="button" data-inema-journey-open class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" title="Minha jornada">
+            <span aria-hidden="true">◷</span><span class="hidden sm:inline">Jornada</span>
+            <span class="inema-journey-badge hidden" data-inema-journey-badge data-count="0" aria-hidden="true"></span>
+          </button>
+          <button type="button" data-inema-appearance-toggle="[data-inema-appearance]" aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" title="Aparência e leitura">
+            <span aria-hidden="true">◑</span><span class="hidden sm:inline">Aparência</span>
+          </button>
+          <button id="theme-toggle" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" title="Alternar claro/escuro" aria-label="Alternar claro/escuro">
+            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-neutral-300" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-neutral-300" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+    <div data-inema-appearance class="inema-appearance-pop" role="dialog" aria-label="Aparência e leitura">
+      <div class="inema-segment"><span class="inema-segment-label">Tema</span>
+        <button data-inema-set-theme="inema-dark">Escuro</button>
+        <button data-inema-set-theme="claro">Claro</button>
+        <button data-inema-set-theme="sepia">Sépia</button>
+        <button data-inema-set-theme="foco">Foco</button>
+        <button data-inema-set-theme="contraste">Alto contraste</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Fonte</span>
+        <button data-inema-set-font="inter">Inter</button>
+        <button data-inema-set-font="system">Sistema</button>
+        <button data-inema-set-font="leitura">Leitura</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Tamanho</span>
+        <button data-inema-set-fontscale="100">A</button>
+        <button data-inema-set-fontscale="112">A+</button>
+        <button data-inema-set-fontscale="125">A++</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Largura</span>
+        <button data-inema-set-linewidth="60">Estreito</button>
+        <button data-inema-set-linewidth="68">Médio</button>
+        <button data-inema-set-linewidth="75">Largo</button>
+      </div>
+      <div class="inema-segment"><span class="inema-segment-label">Entrelinha</span>
+        <button data-inema-set-leading="1.45">Compacto</button>
+        <button data-inema-set-leading="1.7">Confortável</button>
+      </div>
+      <div class="inema-accent-grid" aria-label="Cor de acento">
+        <button data-inema-set-accent="emerald" title="Esmeralda"></button>
+        <button data-inema-set-accent="blue" title="Azul"></button>
+        <button data-inema-set-accent="purple" title="Roxo"></button>
+        <button data-inema-set-accent="amber" title="Âmbar"></button>
+        <button data-inema-set-accent="teal" title="Teal"></button>
+        <button data-inema-set-accent="rose" title="Rosa"></button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="conteudo">
+
+    <!-- HERO -->
+    <header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-5 tracking-wide">IMERSÃO · 3 DIAS · DO PROMPT AO SISTEMA</span>
+        <h1 class="text-4xl sm:text-5xl font-bold mb-4 leading-tight">Arquitetura de Intenção</h1>
+        <p class="text-2xl sm:text-3xl font-semibold text-amber-400 mb-6">Prompt não basta.</p>
+        <div class="inema-prose">
+          <p class="text-lg text-neutral-300 mb-4 leading-relaxed">
+            Depois do <strong class="text-neutral-100">coding</strong>, do <strong class="text-neutral-100">vibe coding</strong> e dos <strong class="text-neutral-100">agentes</strong>, vem a próxima camada: estruturar <strong class="text-amber-400">contexto, regras, memória, objetivos e validação</strong> para que a IA transforme intenção em resultado confiável, repetível e alinhado.
+          </p>
+          <p class="text-lg text-neutral-400 mb-8 leading-relaxed">
+            Em 3 dias você sai do uso improvisado da IA e aprende a <strong class="text-neutral-200">projetar o sistema</strong> por trás da intenção — com a mesma lógica que vale para qualquer ferramenta.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row justify-start gap-4 mb-12">
+          <a href="dia-1.html" class="text-center px-7 py-3.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors">Começar o Dia 1 →</a>
+          <a href="#mapa" class="text-center px-7 py-3.5 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors">Ver o mapa da imersão</a>
+        </div>
+
+        <!-- HERO SVG: a piramide -->
+        <div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 overflow-hidden">
+          <svg viewBox="0 0 1000 360" class="w-full h-auto" role="img" aria-label="A pirâmide da evolução: Coding na base, depois Vibe Coding, Engenharia Agêntica e, no topo, Arquitetura de Intenção. À medida que se sobe, o papel do humano passa de escrever para arquitetar, e a confiabilidade do resultado aumenta.">
+            <defs>
+              <linearGradient id="piram-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+              <filter id="piram-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <pattern id="piram-grid" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1.3" cy="1.3" r="1.3" fill="#f59e0b" opacity="0.12"/></pattern>
+              <marker id="piram-ah" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto"><path d="M5,0 L9,9 L1,9 Z" fill="#fbbf24"/></marker>
+              <marker id="piram-ahc" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto"><path d="M5,0 L9,9 L1,9 Z" fill="#38bdf8"/></marker>
+            </defs>
+            <rect x="0" y="0" width="1000" height="360" fill="url(#piram-grid)"/>
+
+            <!-- eixo esquerdo: papel do humano sobe -->
+            <line x1="92" y1="312" x2="92" y2="52" stroke="#fbbf24" stroke-width="2" opacity="0.6" marker-end="url(#piram-ah)"/>
+            <text x="74" y="185" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" transform="rotate(-90 74 185)" text-anchor="middle">papel do humano sobe</text>
+
+            <!-- eixo direito: confiabilidade sobe -->
+            <line x1="908" y1="312" x2="908" y2="52" stroke="#38bdf8" stroke-width="2" opacity="0.55" marker-end="url(#piram-ahc)"/>
+            <text x="926" y="185" fill="#bfe6ff" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" transform="rotate(90 926 185)" text-anchor="middle">confiabilidade sobe</text>
+
+            <!-- base: Coding -->
+            <rect x="175" y="258" width="650" height="58" rx="12" fill="#1f1604" stroke="#fbbf24" stroke-width="2" opacity="0.92"/>
+            <text x="500" y="283" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="17" font-weight="600">Coding</text>
+            <text x="500" y="302" text-anchor="middle" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="12">você escreve cada linha</text>
+
+            <!-- Vibe Coding -->
+            <rect x="232" y="186" width="536" height="58" rx="12" fill="#1f1604" stroke="#fbbf24" stroke-width="2" opacity="0.94"/>
+            <text x="500" y="211" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="17" font-weight="600">Vibe Coding</text>
+            <text x="500" y="230" text-anchor="middle" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="12">você descreve, a IA gera a 1ª solução</text>
+
+            <!-- Engenharia Agentica -->
+            <rect x="289" y="114" width="422" height="58" rx="12" fill="#1f1604" stroke="#fbbf24" stroke-width="2"/>
+            <text x="500" y="139" text-anchor="middle" fill="#fbbf24" font-family="Inter,sans-serif" font-size="17" font-weight="600">Engenharia Agêntica</text>
+            <text x="500" y="158" text-anchor="middle" fill="#fcd9a0" font-family="Inter,sans-serif" font-size="12">a IA executa em ciclos, você dirige</text>
+
+            <!-- topo: Arquitetura de Intencao (foco, glow) -->
+            <g filter="url(#piram-glow)"><rect x="346" y="42" width="308" height="60" rx="13" fill="url(#piram-grad)" stroke="#f59e0b" stroke-width="2.5"/></g>
+            <text x="500" y="68" text-anchor="middle" fill="#231400" font-family="Inter,sans-serif" font-size="17" font-weight="700">Arquitetura de Intenção</text>
+            <text x="500" y="87" text-anchor="middle" fill="#3a2400" font-family="Inter,sans-serif" font-size="12" font-weight="600">você arquiteta o sistema que orienta a IA</text>
+          </svg>
+          <p class="text-xs text-neutral-500 mt-3 text-center">A escada da IA — cada degrau eleva o papel de quem conduz. O topo é o foco da imersão.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+
+      <!-- PROGRESSO DO CURSO -->
+      <section class="mb-16">
+        <div class="bg-dark-800 rounded-xl border border-dark-600 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-6">
+          <div class="flex-1">
+            <h2 class="text-lg font-semibold mb-1">Seu progresso na imersão</h2>
+            <p class="text-sm text-neutral-400 mb-3">Marque cada seção como lida nos dias. Tudo fica salvo no seu navegador.</p>
+            <div data-inema-meter="curso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso do curso">
+              <div class="flex justify-between text-sm mb-1.5">
+                <span class="inema-meter-label" data-inema-meter-frac>0 de 19</span>
+                <span class="text-amber-400 font-semibold" data-inema-meter-pct>0%</span>
+              </div>
+              <div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill></div></div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 sm:w-52">
+            <button type="button" data-inema-journey-open class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-semibold transition-colors">Continuar de onde parei</button>
+            <a href="dia-1.html" class="text-center px-4 py-2.5 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg text-sm font-semibold transition-colors">Ir para o Dia 1</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- O QUE VOCE VAI CONSTRUIR -->
+      <section class="mb-16">
+        <h2 class="text-2xl font-bold mb-2">O que você vai construir</h2>
+        <p class="text-neutral-400 mb-8 inema-prose">Não é "usar IA melhor". É sair com um <strong class="text-neutral-200">sistema</strong> seu, funcionando.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="bg-dark-800 rounded-xl border border-dark-600 p-6">
+            <div class="text-2xl mb-3">🔺</div>
+            <h3 class="font-semibold mb-1.5">Ver a pirâmide</h3>
+            <p class="text-sm text-neutral-400">Entender as 4 camadas e onde você está hoje — para parar de improvisar.</p>
+          </div>
+          <div class="bg-dark-800 rounded-xl border border-dark-600 p-6">
+            <div class="text-2xl mb-3">🧱</div>
+            <h3 class="font-semibold mb-1.5">Dominar os 5 pilares</h3>
+            <p class="text-sm text-neutral-400">Contexto, objetivos, regras, memória e validação — estruturados num canvas.</p>
+          </div>
+          <div class="bg-dark-800 rounded-xl border border-dark-600 p-6">
+            <div class="text-2xl mb-3">⚙️</div>
+            <h3 class="font-semibold mb-1.5">Montar um sistema</h3>
+            <p class="text-sm text-neutral-400">Juntar tudo num fluxo repetível com o ciclo rodar → validar → ajustar → melhorar.</p>
+          </div>
+          <div class="bg-dark-800 rounded-xl border border-dark-600 p-6">
+            <div class="text-2xl mb-3">🚀</div>
+            <h3 class="font-semibold mb-1.5">Sair aplicando</h3>
+            <p class="text-sm text-neutral-400">Um caso real seu atravessa os 3 dias e vira resultado concreto no fim.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- A PIRAMIDE EM PALAVRAS -->
+      <section class="mb-16">
+        <h2 class="text-2xl font-bold mb-2">A evolução, em quatro degraus</h2>
+        <p class="text-neutral-400 mb-8 inema-prose">A pergunta muda de <em>"como faço um prompt melhor?"</em> para <strong class="text-amber-400">"que sistema orienta a IA?"</strong>.</p>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4 bg-dark-800 rounded-xl border border-dark-600 p-5">
+            <span class="flex-shrink-0 w-9 h-9 rounded-full bg-dark-700 text-neutral-300 font-bold flex items-center justify-center">1</span>
+            <div><h3 class="font-semibold">Coding</h3><p class="text-sm text-neutral-400">O humano escreve cada linha e controla toda a lógica.</p></div>
+          </div>
+          <div class="flex items-start gap-4 bg-dark-800 rounded-xl border border-dark-600 p-5">
+            <span class="flex-shrink-0 w-9 h-9 rounded-full bg-dark-700 text-neutral-300 font-bold flex items-center justify-center">2</span>
+            <div><h3 class="font-semibold">Vibe Coding</h3><p class="text-sm text-neutral-400">Você descreve uma intenção em linguagem natural e a IA gera a primeira solução.</p></div>
+          </div>
+          <div class="flex items-start gap-4 bg-dark-800 rounded-xl border border-dark-600 p-5">
+            <span class="flex-shrink-0 w-9 h-9 rounded-full bg-dark-700 text-neutral-300 font-bold flex items-center justify-center">3</span>
+            <div><h3 class="font-semibold">Engenharia Agêntica</h3><p class="text-sm text-neutral-400">A IA executa em ciclos — escreve, testa, corrige, entrega. Você deixa de operar cada etapa e passa a dirigir.</p></div>
+          </div>
+          <div class="flex items-start gap-4 bg-gradient-to-br from-amber-900/30 to-dark-800 rounded-xl border border-amber-500/30 p-5">
+            <span class="flex-shrink-0 w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center">4</span>
+            <div><h3 class="font-semibold text-amber-400">Arquitetura de Intenção</h3><p class="text-sm text-neutral-300">O foco sai do agente e vai para o <strong>sistema que orienta o agente</strong>. É aqui que a imersão vive.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MAPA DA TRILHA -->
+      <section id="mapa" class="mb-16">
+        <h2 class="text-2xl font-bold mb-6">Mapa da trilha</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <a href="dia-1.html" class="group bg-dark-800 rounded-xl border border-dark-600 hover:border-amber-500/30 p-6 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-amber-400 font-bold">1.1</span>
+              <span class="text-xs text-neutral-500">~90 min</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-1 group-hover:text-amber-400 transition-colors">🔺 Dia 1 — A Pirâmide</h3>
+            <p class="text-sm text-neutral-400 mb-3">Improvisar ou projetar</p>
+            <span class="text-xs text-neutral-500">6 seções · ver + diagnosticar</span>
+          </a>
+          <a href="dia-2.html" class="group bg-dark-800 rounded-xl border border-dark-600 hover:border-amber-500/30 p-6 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-amber-400 font-bold">1.2</span>
+              <span class="text-xs text-neutral-500">~110 min</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-1 group-hover:text-amber-400 transition-colors">🧱 Dia 2 — Os 5 Pilares</h3>
+            <p class="text-sm text-neutral-400 mb-3">Estruturar a intenção</p>
+            <span class="text-xs text-neutral-500">7 seções · o método, mão na massa</span>
+          </a>
+          <a href="dia-3.html" class="group bg-dark-800 rounded-xl border border-dark-600 hover:border-amber-500/30 p-6 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-amber-400 font-bold">1.3</span>
+              <span class="text-xs text-neutral-500">~100 min</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-1 group-hover:text-amber-400 transition-colors">⚙️ Dia 3 — O Sistema</h3>
+            <p class="text-sm text-neutral-400 mb-3">De intenção a resultado</p>
+            <span class="text-xs text-neutral-500">6 seções · montar + operar</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- PRE-REQUISITOS + COMO FUNCIONA -->
+      <section class="mb-16 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-dark-800 rounded-xl border border-dark-600 p-7">
+          <h2 class="text-xl font-bold mb-4">Pré-requisitos</h2>
+          <ul class="space-y-3 text-neutral-300">
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Nenhum conhecimento de programação. Se você já usou um chat de IA, está pronto.</span></li>
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Vontade de aplicar, não só assistir. É mão na massa.</span></li>
+            <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Um caso real seu (um problema, tarefa ou ideia) para levar nos 3 dias.</span></li>
+          </ul>
+        </div>
+        <div class="bg-dark-800 rounded-xl border border-dark-600 p-7">
+          <h2 class="text-xl font-bold mb-4">Como funciona a imersão</h2>
+          <div class="space-y-3 text-sm text-neutral-300">
+            <p><strong class="text-amber-400">Dia 1 — Ver.</strong> Você enxerga a pirâmide, diagnostica onde está e escolhe sua intenção real.</p>
+            <p><strong class="text-amber-400">Dia 2 — Estruturar.</strong> Você preenche os 5 pilares no Canvas para o seu caso.</p>
+            <p><strong class="text-amber-400">Dia 3 — Montar.</strong> Você transforma o Canvas num sistema que roda e se melhora.</p>
+            <p class="text-neutral-400 pt-2 border-t border-dark-600">Cada dia tem exercícios práticos, exemplos prontos e um template reutilizável.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA FINAL -->
+      <section class="mb-4">
+        <div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-2xl border border-amber-500/30 p-8 sm:p-10 text-center">
+          <h2 class="text-2xl sm:text-3xl font-bold mb-3">O próximo passo depois do prompt</h2>
+          <p class="text-neutral-300 mb-7 max-w-2xl mx-auto">Você vai usar IA no raso — ou estruturar sistemas capazes de multiplicar resultado? Comece agora.</p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="dia-1.html" class="px-8 py-3.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors">Começar o Dia 1 →</a>
+            <a href="https://inema.club" target="_blank" rel="noopener" class="px-8 py-3.5 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors">Conhecer o INEMA.CLUB</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="border-t border-dark-600 py-8 mt-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+      <p>Arquitetura de Intenção — uma imersão <a href="https://inema.club" target="_blank" rel="noopener" class="text-sky-400 hover:text-sky-300">INEMA.CLUB</a> · 2026</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS: nucleo v1 -->
+  <script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+
+  <!-- Camada de aprendizagem v2 -->
+  <script src="assets/learn.js"></script>
+  <script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+  </script>
+</body>
+</html>
