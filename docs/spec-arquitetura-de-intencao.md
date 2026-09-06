@@ -1,4 +1,4 @@
-# Trilha "Arquitetura de Intenção" — Blueprint (3 dias)
+# Trilha "Arquitetura de Intenção" — Blueprint (4 dias)
 
 > Curso HTML self-contained no padrão **INEMA.CLUB `formato-curso-v2`** (camada de
 > aprendizagem: progresso, marcar lido, dúvida, anotação/highlight, "minha jornada",
@@ -46,7 +46,7 @@ domínios (conteúdo/marca, planejamento de produto, automação) para não pren
 ## Estrutura de arquivos
 - `index.html` — landing da trilha: hero com a pirâmide, os 3 dias como módulos, "o que você
   vai aprender", pré-requisitos, CTA INEMA.CLUB.
-- `dia-1.html`, `dia-2.html`, `dia-3.html` — uma página por dia.
+- `dia-1.html`, `dia-2.html`, `dia-3.html`, `dia-4.html` — uma página por dia.
 - Tudo self-contained (HTML + Tailwind CDN + JS inline), abre em `file://`, padrão v2.
 
 ## Arco dos 3 dias
@@ -88,3 +88,21 @@ ao vivo" (tempo + dinâmica de grupo) · entregável do dia.**
 ## Camada de aprendizagem (v2)
 Progresso/marcar-lido, dúvida, anotações/highlight no texto, painel "minha jornada"
 (continuar de onde parei), export/import `.json`, temas trocáveis + preferências de leitura.
+
+### Dia 4 — A Virada: modelos que operam na intenção  *(subtrair + migrar — adicionado em 2026-09-06)*
+Contexto: em set/2026 saíram o Claude Fable 5.1 (Anthropic, 1/set) e o GPT-6 Astra (OpenAI, 3–4/set).
+Os guias oficiais dizem que instruções escritas para modelos anteriores "são prescritivas demais e
+degradam a qualidade" (Anthropic) e que skills/AGENTS.md acumularam "gordura" (equipe do Codex/OpenAI).
+- T1 O que mudou em set/2026: fatos e datas; erros opostos (Fable age além / Astra para e pergunta)
+  com a mesma causa; os 5 pilares mudam de forma, não caem.
+- T2 Engenharia por subtração: pergunta de corte linha a linha; checklist de auditoria; permissão com cerca.
+- T3 Fronteiras, não passos: pilar Autoridade; as três paradas (irreversível / escopo / só o usuário sabe);
+  suposição declarada; garantia fora do texto.
+- T4 Definição de pronto e verificação com evidência: prompt de seis partes; "poder fazer ≠ ter feito";
+  verificador separado; último parágrafo não é promessa.
+- T5 Esforço, memória e trabalho longo: cinco níveis; "coisa mais simples que funcione"; pasta de lições
+  (uma por arquivo); ritmo de atualização; delegação; custo de cache.
+- T6 Projeto: migrar a Ficha do Sistema (dia 3) para a Ficha de Intenção v2 e rodar o mesmo caso nos dois
+  formatos (tabela de comparação).
+- Template: Ficha de Intenção v2 + tabela de comparação. Fontes datadas (5/set/2026) no fim da página.
+- Entregável: Ficha v2 datada + comparação v1 × v2 no caso real. Reauditar a cada nova geração.
