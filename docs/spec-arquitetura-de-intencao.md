@@ -37,19 +37,19 @@ A cadeia: **Intenção → Contexto → Processo → Resultado.**
 Os 4 colapsos do uso raso: intenção sem estrutura = ruído · contexto sem objetivo = excesso ·
 automação sem regra = risco · IA sem validação = ilusão de produtividade.
 
-## Fio condutor (caso real único, atravessa os 3 dias)
+## Fio condutor (caso real único, atravessa os 4 dias)
 Caso-âncora demonstrado por completo: **"Assistente de atendimento ao cliente de um negócio"**
 (universal, mostra os 5 pilares com clareza). Cada aluno escolhe **sua própria intenção real**
 no Dia 1 e a desenvolve até virar sistema no Dia 3. Exemplos prontos adicionais em outros
 domínios (conteúdo/marca, planejamento de produto, automação) para não prender a uma vertical.
 
 ## Estrutura de arquivos
-- `index.html` — landing da trilha: hero com a pirâmide, os 3 dias como módulos, "o que você
+- `index.html` — landing da trilha: hero com a pirâmide, os 4 dias como módulos, "o que você
   vai aprender", pré-requisitos, CTA INEMA.CLUB.
 - `dia-1.html`, `dia-2.html`, `dia-3.html`, `dia-4.html` — uma página por dia.
 - Tudo self-contained (HTML + Tailwind CDN + JS inline), abre em `file://`, padrão v2.
 
-## Arco dos 3 dias
+## Arco dos 4 dias
 Cada dia tem: **objetivos de aprendizagem · conceito (com ilustração SVG clara) · exemplos
 prontos · 1+ exercício prático com gabarito · 1 template reutilizável · bloco "para facilitar
 ao vivo" (tempo + dinâmica de grupo) · entregável do dia.**
@@ -59,7 +59,7 @@ ao vivo" (tempo + dinâmica de grupo) · entregável do dia.**
 - Improvisar × projetar; depender da sorte × construir sistema.
 - Os 4 sintomas do uso raso (com exemplo de cada).
 - **Exercícios:** (a) autodiagnóstico "onde estou na pirâmide"; (b) reescrever um prompt solto
-  identificando o que falta; (c) escolher 1 intenção real para os 3 dias.
+  identificando o que falta; (c) escolher 1 intenção real para os 4 dias.
 - **Template:** "Mapa de Posição na Pirâmide".
 - **Entregável:** mapa preenchido + 1 intenção real escolhida.
 
