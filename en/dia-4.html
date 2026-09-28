@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="arquitetura-intencao" name="inema-course"/>
+<title>Day 4 — The Shift: models that operate on intent | Architecture of Intent · INEMA.CLUB</title>
+<!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+<script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+<link href="../assets/learn.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+<script data-inema-manifest="" type="application/json">
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" },
+        { "id": "1-4", "title": "Dia 4 — A Virada", "topics": 6, "href": "dia-4.html" }
+      ]}
+    ]
+  }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+<link href="https://inematds.github.io/arquitetura-de-intencao/dia-4.html" hreflang="pt-BR" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/en/dia-4.html" hreflang="en" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/es/dia-4.html" hreflang="es" rel="alternate"/></head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen"><div class="inema-lang" style="position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:2px;padding:4px;border-radius:10px;background:rgba(12,12,16,.82);border:1px solid rgba(226,162,59,.45);font:600 12px/1 Sora,Inter,system-ui,sans-serif;backdrop-filter:blur(8px)" translate="no"><a href="../dia-4.html" hreflang="pt-BR" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">PT</a><a href="./dia-4.html" hreflang="en" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#1a1206;background:#E2A23B">EN</a><a href="../es/dia-4.html" hreflang="es" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">ES</a></div>
+<a class="skip" href="#conteudo">Skip to the content</a>
+<!-- NAVIGATION (identico em todas as paginas) -->
+<nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center h-14">
+<div class="flex items-center space-x-3">
+<a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300" href="index.html">
+<span class="text-2xl">🎯</span>
+<span class="font-bold text-lg hidden sm:inline">Intent Architecture</span>
+</a>
+<span class="text-neutral-600 hidden sm:inline">|</span>
+<a class="text-sky-400 hover:text-sky-300 text-sm font-medium" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a>
+</div>
+<div class="flex items-center space-x-1 sm:space-x-2">
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="index.html">Start</a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-1.html"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Day 1</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-2.html"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Day 2</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-3.html"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Day 3</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10" href="dia-4.html"><span class="sm:hidden">D4</span><span class="hidden sm:inline">Day 4</span></a>
+<button class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-journey-open="" title="My journey" type="button">
+<span aria-hidden="true">◷</span><span class="hidden sm:inline">Journey</span>
+<span aria-hidden="true" class="inema-journey-badge hidden" data-count="0" data-inema-journey-badge=""></span>
+</button>
+<button aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-appearance-toggle="[data-inema-appearance]" title="Appearance and reading" type="button">
+<span aria-hidden="true">◑</span><span class="hidden sm:inline">Appearance</span>
+</button>
+<button aria-label="Toggle light/dark" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" id="theme-toggle" title="Toggle light/dark">
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-dark-icon" viewbox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-light-icon" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+<div aria-label="Appearance and reading" class="inema-appearance-pop" data-inema-appearance="" role="dialog">
+<div class="inema-segment"><span class="inema-segment-label">Theme</span>
+<button data-inema-set-theme="inema-dark">Dark</button>
+<button data-inema-set-theme="claro">Clear</button>
+<button data-inema-set-theme="sepia">Sepia</button>
+<button data-inema-set-theme="foco">Focus</button>
+<button data-inema-set-theme="contraste">High contrast</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Source</span>
+<button data-inema-set-font="inter">Inter</button>
+<button data-inema-set-font="system">System</button>
+<button data-inema-set-font="leitura">Reading</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Size</span>
+<button data-inema-set-fontscale="100">A</button>
+<button data-inema-set-fontscale="112">A+</button>
+<button data-inema-set-fontscale="125">A++</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Width</span>
+<button data-inema-set-linewidth="60">Narrow</button>
+<button data-inema-set-linewidth="68">Medium</button>
+<button data-inema-set-linewidth="75">Long</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Between the lines</span>
+<button data-inema-set-leading="1.45">Compact</button>
+<button data-inema-set-leading="1.7">Comfortable</button>
+</div>
+<div aria-label="Accent color" class="inema-accent-grid">
+<button data-inema-set-accent="emerald" title="Emerald"></button>
+<button data-inema-set-accent="blue" title="Blue"></button>
+<button data-inema-set-accent="purple" title="Purple"></button>
+<button data-inema-set-accent="amber" title="Amber"></button>
+<button data-inema-set-accent="teal" title="Teal"></button>
+<button data-inema-set-accent="rose" title="Pink"></button>
+</div>
+</div>
+</nav>
+<main id="conteudo">
+<!-- BREADCRUMB -->
+<nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2"><div class="flex items-center gap-2 text-sm text-neutral-400"><a class="hover:text-amber-400" href="index.html">Start</a><span>/</span><span class="text-amber-400">Day 4</span></div></nav>
+<!-- HEADER -->
+<header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-4">DAY 4 · SEPT/2026 UPDATE</span>
+<h1 class="text-3xl sm:text-4xl font-bold mb-3">🧭 The Turning Point: Models That Operate on Intent</h1>
+<p class="text-lg text-neutral-400 max-w-3xl inema-prose">What changed with Claude Fable 5.1 and GPT-6 Astra — and how to migrate your system from “prompt with steps” to “intent with boundaries, ready and verified.”</p>
+<p class="text-base text-neutral-300 max-w-3xl mt-4 inema-prose">In the first week of September 2026, the two biggest AI labs launched a new generation: Anthropic published the <strong class="text-amber-400">Claude Fable 5.1</strong> (1/Sep) and OpenAI <strong class="text-amber-400">GPT-6 Astra</strong> (preview on Sep 3, public release on Sep 4). They have one thing in common that changes our course: they follow instructions so well that <strong class="text-amber-400">prompts packed with steps started getting in the way</strong>. The companies themselves say that instructions written for older models “are too prescriptive and can degrade quality.” The Day 1 pyramid still stands, but the model climbed a step on its own: it already handles the “how.” What’s left for you is what has always been at the heart of Intent Architecture—what, how far, and how to know it’s done. Today you’ll learn what changed, what to delete, what to write in its place, and how to migrate the Day 3 System Brief to Intent Brief v2.</p>
+<div class="mt-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Put what changed in Sep/2026 (Fable 5.1 and GPT-6 Astra) into context and explain why it affects people who write systems, not just people who write code.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Apply engineering through subtraction: audit prompts, rules, and skills, and remove what existed only to prop up a weak model.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Replace step lists with authority boundaries: what the model decides on its own and the 3 situations where it stops.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Write the definition of done and require verification with evidence before the model declares it complete.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Using effort, file-based memory, and progress updates as controls for long-running work.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Migrate your System Sheet (day 3) to the Intention Sheet v2 and run the same real case in both formats.</span></div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-8 max-w-2xl">
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">6</div><div class="text-xs text-neutral-400">Topics</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">~100</div><div class="text-xs text-neutral-400">Minutes</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Application</div><div class="text-xs text-neutral-400">Level</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Migration</div><div class="text-xs text-neutral-400">Type</div></div>
+</div>
+</div>
+</header>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+<!-- TOC -->
+<nav aria-label="Today’s index" class="hidden lg:block sticky top-24 self-start text-sm" data-inema-toc="">
+<p class="text-neutral-400 mb-2">Section <span data-inema-section-counter=""></span></p>
+<ol class="space-y-1">
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-1">1. What changed in Sep/2026</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-2">2. Engineering by subtraction</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-3">3. Boundaries, not steps</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-4">4. Done and verification</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-5">5. Effort, memory, and long-running work</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-6">6. Project: System Brief v2</a></li>
+</ol>
+</nav>
+<!-- CONTEUDO -->
+<div>
+<div aria-label="Day progress" aria-valuemax="100" aria-valuemin="0" class="mb-10" data-inema-meter="modulo:1-4" role="progressbar">
+<div class="flex justify-between text-sm mb-1.5">
+<span class="inema-meter-label" data-inema-meter-frac="">0 of 6</span>
+<span class="text-amber-400 font-semibold" data-inema-meter-pct="">0%</span>
+</div>
+<div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill=""></div></div>
+</div>
+<article data-inema-module="1-4" data-inema-track="1">
+<!-- ====================== TOPICO 1 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-1" id="topico-1">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">1</span>
+<h2 class="text-2xl font-bold">🗓️ What Changed in September 2026</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t1-p1">For three years, the recipe was the same: the model makes a mistake, you write one more rule. "Always run the tests." "Read the documentation before changing anything." "Ask permission at every step." Each line came from a real failure by a weaker model. In September 2026, that recipe was turned upside down: the two new generations follow instructions so well that <strong class="text-amber-400">follow the crutches</strong> — and the crutches started costing you quality.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p2"><strong class="text-amber-400">Claude Fable 5.1</strong> (Anthropic, 1/Sep/2026). Same model as Mythos 5.1, with different safeguards. It was built for long-running, autonomous work: it can sustain tasks for hours or days, keep its own records, reprioritize, and pick up where it left off. Fable 5’s official prompting guide says, verbatim, that skills designed for earlier models “are too prescriptive and may degrade output quality.” Version 5.1 is about 25% cheaper in typical use and up to 45% cheaper in agentic work, and at medium effort delivers what Fable 5 did at high effort.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p3"><strong class="text-amber-400">GPT-6 Astra</strong> (OpenAI, preview 3/Sep, public 4/Sep/2026). Major gains in computer use, coding, science, and long context. A new behavior that catches everyone by surprise: it <strong class="text-amber-400">asks more questions</strong> before acting and format everything as lists. A prompt that only describes the task often comes back with a question and a summary instead of the completed work. According to OpenAI’s own guidance (cited by the guides we read), the antidote is to tell the model to <em>infer intent from context and persist until the objective is complete</em> — and make it clear that recognizing that <em>could</em> doing isn’t the same as having done it.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p4">Notice the pattern. The two errors are opposites (one goes beyond the request, the other stops too soon), but they have the same cause: <strong class="text-amber-400">the model is following what you wrote, not what you wanted</strong>. If your text still describes steps, the model executes steps. If it describes firm boundaries, the model stops at the boundary. What’s missing isn’t more instruction—it’s writing the intent in a way the model can complete on its own.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p5">On 5/Sep/2026, the Codex developer experience team at OpenAI published a guide telling its own users to "stop overengineering prompts": skills, instruction files, and task requests had accumulated "fat — the scaffolding a weaker model needed and a stronger one doesn’t." At Anthropic, the recommendation is the same in different words: review your old instructions and <strong class="text-amber-400">remove what the default behavior already does better</strong>.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p6">For this course, there’s good news. The 5 pillars from day 2 don’t disappear—they <strong class="text-amber-400">change form</strong>. Context becomes <em>source of truth</em> (what’s authoritative, not everything you know). Objectives become <em>result + definition of done</em>. Rules become <em>authority boundaries</em> (what it decides on its own, where it stops). Memory becomes <em>lessons file</em> that the model reads and writes. Validation becomes <em>verification with evidence</em> before declaring it complete. That’s what we’ll build today.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p7">An honest caveat: all of this is time-sensitive. The two models have been out in the wild for less than a week as we write this, and their behavior is still being measured. What doesn’t change is the method: <strong class="text-amber-400">with each generation handoff, you re-audit what you wrote</strong>. This day teaches the method using the facts from Sep/2026 as a case study.</p>
+</div>
+<!-- SVG A: antes/depois -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="Before: a steps-centered prompt, with lots of stacked rules and a fragile result. After: intent with an outcome, boundaries, and a definition of done, and the model handles how to get there." class="w-full h-auto" role="img" viewbox="0 0 1000 300">
+<defs>
+<lineargradient id="d4a-grad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbbf24"></stop><stop offset="1" stop-color="#f59e0b"></stop></lineargradient>
+<pattern height="32" id="d4a-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4a-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4a-grid)" height="300" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif">
+<text fill="#f87171" font-size="14" font-weight="700" text-anchor="middle" x="215" y="34">BEFORE · step-by-step prompt (through 2025)</text>
+<g fill="#fecaca" font-size="11">
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="50"></rect><text text-anchor="middle" x="215" y="66">1. Read all the documentation before making changes</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="80"></rect><text text-anchor="middle" x="215" y="96">2. Run all tests after each step</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="110"></rect><text text-anchor="middle" x="215" y="126">3. Ask permission before continuing</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="140"></rect><text text-anchor="middle" x="215" y="156">4. Explain your reasoning in the response</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="170"></rect><text text-anchor="middle" x="215" y="186">5. Never use lists · 6. Always use lists…</text>
+</g>
+<text fill="#fca5a5" font-size="11" text-anchor="middle" x="215" y="228">a strong model follows every crutch →</text>
+<text fill="#fca5a5" font-size="11" text-anchor="middle" x="215" y="246">stops early, gets too tidy, or asks instead of doing</text>
+<line marker-end="url(#d4a-ah)" stroke="#fbbf24" stroke-width="2.5" x1="400" x2="470" y1="150" y2="150"></line>
+<text fill="#fbbf24" font-size="11" font-weight="600" text-anchor="middle" x="435" y="138">Sep/2026</text>
+<text fill="#fbbf24" font-size="14" font-weight="700" text-anchor="middle" x="740" y="34">AFTER · intent with boundaries</text>
+<rect fill="url(#d4a-grad)" height="180" rx="16" stroke="#f59e0b" stroke-width="2.5" width="440" x="520" y="50"></rect>
+<g fill="#231400" font-size="12" font-weight="700">
+<text x="545" y="80">RESULT</text><text font-weight="400" x="655" y="80">what gets done, and for whom</text>
+<text x="545" y="106">SOURCE OF TRUTH</text><text font-weight="400" x="700" y="106">what takes precedence in case of conflict</text>
+<text x="545" y="132">AUTHORITY</text><text font-weight="400" x="655" y="132">decides on its own · stops in 3 cases</text>
+<text x="545" y="158">READY</text><text font-weight="400" x="655" y="158">the test you apply before accepting it</text>
+<text x="545" y="184">VERIFICATION</text><text font-weight="400" x="655" y="184">evidence before declaring it done</text>
+<text fill="#3b2300" font-size="11" font-weight="400" x="545" y="212">the “how” is up to the model · effort becomes the cost button</text>
+</g>
+<text fill="#fcd9a0" font-size="11" text-anchor="middle" x="740" y="258">the 5 pillars remain — they change form</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Fewer steps, more intention. What used to be a crutch became noise.</p>
+</div>
+<!-- exemplo pronto -->
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Same task, two generations</h3>
+<p class="text-sm text-neutral-400 italic mb-3">An e-commerce owner asks AI to create a weekly sales report from a spreadsheet.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Written for 2025</h4>
+<p class="text-sm text-neutral-300">You are a senior analyst. First open the spreadsheet. Then list all the columns. Then calculate the total by category. Then calculate the change. Don’t make up numbers. Show your reasoning step by step. Before writing the report, ask me whether the structure looks good. Use bullet points. Be concise. Don’t use jargon. Review it twice.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Written for Sep/2026</h4>
+<p class="text-sm text-neutral-300">RESULT: a 1-page weekly sales report for the owner, who decides what to restock on Monday morning. SOURCE OF TRUTH: the vendas-semana.xlsx spreadsheet; if a number doesn’t add up, flag the discrepancy instead of estimating. AUTHORITY: you choose the structure and format; ask only if a missing detail would change the restocking decision. DONE: totals by category match the spreadsheet sum, change from the previous week, 3 items with a suggested action. VERIFICATION: before delivering, check each total against the source and say what you couldn’t verify.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> The first dictates the path and still asks permission midway — with an Astra, it comes back with a question; with a Fable, with narrated reasoning nobody asked for. The second doesn’t say <em>how</em>: says what will be ready, what takes priority, how far it can go on its own, and how to check it. The new model completes the task; the old one needed guidance.</p>
+</div>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Treat every model-generation switch as a trigger to re-audit what you wrote.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Describe the intent (outcome, boundaries, definition of done) instead of the path.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Read the official guide for the model you use before rewriting anything.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Conclude that the "prompt is over" — what ended was the step-by-step prompt.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Responding to an error from the new model by piling on another rule.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Copy the prompt that worked and blame the model when it stops or asks a question.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Take the prompt or system document you use most and count how many lines begin with "always," "never," "before," "after," or "first." That number is your 2025 debt. Today you’ll pay off a good part of it.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Crutch obeyed</h4><p class="text-xs text-neutral-400">A rule created to hold back a weak model. A strong model follows it to the letter—and that’s why it starts costing you quality.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Opposite errors, same cause</h4><p class="text-xs text-neutral-400">Fable may go beyond what you asked; Astra may stop early and ask. In both cases, the model follows the text, not the intent.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Pillars change shape</h4><p class="text-xs text-neutral-400">Context → source of truth · Objectives → outcome + definition of done · Rules → boundaries · Memory → lessons learned file · Validation → evidence-based verification.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Everything has a date</h4><p class="text-xs text-neutral-400">The facts on this day apply to 5/Sep/2026. The method (reauditing with each generation) is what lasts.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 2 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-2" id="topico-2">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">2</span>
+<h2 class="text-2xl font-bold">➖ Engineering by subtraction</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t2-p1">Writing for the next generation is, above all, an exercise in <strong class="text-amber-400">delete</strong>. Not because instructions stopped mattering, but because every line is now taken seriously. A useless line is no longer ignored—it’s followed, taking the place of a line that mattered.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p2">The cutoff comes down to one question, asked line by line: <strong class="text-amber-400">“does the model I use today still need this?”</strong> If a line exists because a 2024 model forgot to run a test, and the 2026 model runs it without being asked, remove it. If it exists because the action is truly dangerous (deleting data, publishing to production, spending money), keep it — and give it the right name: boundary, not step.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p3">The most common targets for cuts, according to the guides from both providers: (1) <strong class="text-amber-400">required rituals</strong> (“read all the documentation before making any changes”); (2) <strong class="text-amber-400">obvious reminders</strong> (“run the tests”, “don’t make things up”); (3) <strong class="text-amber-400">“ask permission”</strong> generic, created after an scare with an older model; (4) <strong class="text-amber-400">formatting rules</strong> in both senses — Fable 5.1 already uses less bold text and fewer lists than earlier versions, so “never use bullets” now removes structure that would be useful; (5) <strong class="text-amber-400">“show your reasoning”</strong> — in Fable, this may even trigger a refusal due to reasoning extraction; if you need to see progress, ask for progress updates, not a transcript of the model’s thoughts.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p4">Skills and project instruction files (CLAUDE.md, AGENTS.md) suffer from the same problem, with one added complication: they're global. One bad line there contaminates every task. The Codex guide's recommendation is direct: keep skill descriptions short and <strong class="text-amber-400">a specific trigger</strong> (“use when reviewing a database migration file — not for general questions”) instead of “use whenever something is related to databases”. Overlapping skills are consolidated; skills that dump the entire workflow become routers, with the details in a separate file.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p5">Subtracting doesn't mean being left with nothing. The Fable guide's rule is: one <strong class="text-amber-400">short statement of intent</strong> replaces the list of behaviors. Instead of listing “don't make long PRs, don't comment line by line, don't list options you won't pursue,” write one sentence: “Start with the result; details and reasoning come next; to shorten it, cut what won't change the reader's decision—don't compress it into fragments.” The model generalizes.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p6">And what takes the place of what was removed? <strong class="text-amber-400">Explicit permissions for safe, repeatable workflows</strong>. “Local tests use disposable data and don’t touch production: run them, fix what the change broke, and rerun them without asking for approval at every step.” That’s the opposite of a crutch: instead of slowing you down, it sets you free—within guardrails you designed.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p7">One detail that changes how you test: both companies say the same prompt <strong class="text-amber-400">behaves differently at each effort level</strong> and in each generation. So the audit doesn’t end with the cut — it ends by running the real case after the cut and comparing it with before. Subtraction without rerunning is a guess.</p>
+</div>
+<!-- checklist de auditoria -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Subtraction audit checklist</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-6">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rituals</h4><p class="text-xs text-neutral-400">Requires reading documentation or the repository map before <em>every</em> change, regardless of the task size? Delete the general rule; let the model decide what to read.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Obvious reminders</h4><p class="text-xs text-neutral-400">Still telling it to run tests the model already runs on its own? Delete the reminder. If it doesn’t run them, the problem is permission, not the reminder.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">“Ask first”</h4><p class="text-xs text-neutral-400">Does the rule exist because the action is high-risk, or because an old model behaved badly? Only the first stays—rewritten as a boundary (topic 3).</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Formatting and reasoning</h4><p class="text-xs text-neutral-400">“Never use lists,” “always use lists,” “explain your reasoning”: delete these. If needed, say <em>when</em> a format helps, and ask for progress updates instead of transcribed thinking.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Skills</h4><p class="text-xs text-neutral-400">Description longer than the trigger? Shorten it. Do two skills trigger for the same task? Consolidate them. Does the skill dump the whole workflow? Turn it into a router.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Permissions</h4><p class="text-xs text-neutral-400">Is there at least one safe, repeatable workflow (local tests, lint, build) with explicit permission to run without stopping? If not, that's what should replace what was removed.</p></div>
+</div>
+<!-- exemplo pronto -->
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Project instruction file: crutch vs. permission</h3>
+<p class="text-sm text-neutral-400 italic mb-3">Excerpt from a CLAUDE.md / AGENTS.md inherited from 2025 (adapted from the Codex team guide).</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Crutch</h4>
+<p class="text-sm text-neutral-300">Before making any changes, read the full architecture document, the API reference, and the testing guide. After each change, run the full test suite and wait for explicit approval before moving on to the next step.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Permission with guardrails</h4>
+<p class="text-sm text-neutral-300">Local tests use disposable data and have no access to production. Run them, fix failures caused by the requested change, and rerun the affected tests without asking for approval at every step. Stop and ask only before a deploy, destructive migration, or external call that incurs a charge.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> The old version forces a full read and an approval pause for every change, including ones that don’t even touch the tests. The new one names the safe workflow, allows work within it, and reserves the pause for what actually requires a human. The model finishes the task instead of stopping at every command.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Go through prompts, skills, and global files line by line, asking, "Does today’s model still need this?"</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Replace behavior lists with a short statement of intent.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Re-run the real case after the cut and compare it with before.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Deleting everything at once without knowing which line was a real boundary.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep “show your reasoning”—in Fable, it may trigger a refusal; ask for progress, not thoughts.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep old formatting rules (“no bullets ever”) that now remove useful structure.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Ask the model itself to audit: "Read this instruction file. For each line, say whether you would do this by default without the line. Mark the ones that represent a real security boundary." It’s good at this—and Fable’s guide says it updates skills on its own based on what it learns during the task.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Cutoff question</h4><p class="text-xs text-neutral-400">“Does the model I use today still need this?” Go line by line. Remove what was a crutch; keep what defines a boundary.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Short statement of intent</h4><p class="text-xs text-neutral-400">One sentence of intention replaces the list of behaviors. The model generalizes from the why.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Permission with guardrails</h4><p class="text-xs text-neutral-400">What replaces the crutch: a named, fully authorized safe workflow, with the pause reserved for what requires a human.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Cut it, rerun</h4><p class="text-xs text-neutral-400">Behavior changes by generation and effort level. The audit only ends when the real case is run again.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 3 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-3" id="topico-3">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">3</span>
+<h2 class="text-2xl font-bold">🚧 Boundaries, Not Steps</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t3-p1">On day 2, the Rules pillar answered "what AI can't do." In the new generation, it answers a more nuanced question: <strong class="text-amber-400">how far it decides on its own, and exactly when it stops and calls you</strong>. This is the Authority pillar. Too little authority stalls the work; too much leads to actions nobody asked for.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p2">The two new models show the two sides of the error. According to the official guide, Fable “may occasionally take actions that weren’t requested”—drafting an email nobody asked for, creating a backup as a precaution, fixing a nearby bug the task didn’t mention. Astra does the opposite: <strong class="text-amber-400">“takes your boundaries seriously and can stop where you’d prefer it to continue”</strong>, in the Codex team’s description. A guardrail written to correct a disobedient model becomes an unwanted stop for an obedient one.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p3">The answer isn’t to erase boundaries or multiply them: it’s to <strong class="text-amber-400">rescope</strong>. The Fable guide sums up in one sentence what a 2025 prompt took twenty to say: “Stop for the user only when the work truly requires it: a destructive or irreversible action, a real change in scope, or information only they have. If you hit one of those, ask and end the turn instead of ending with a promise.” These are the <strong class="text-amber-400">three stops</strong>. Anything that isn’t one of those—reversible actions that follow from the request—proceeds without asking.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p4">On Astra’s side, the mirrored instruction: <strong class="text-amber-400">“infer the intent from what you already have, list your assumptions at the top, and proceed based on them”</strong>. Notice it doesn’t say “never ask”—that would force a guess when a real decision is missing. It redirects the question: instead of stopping, the model states what it assumed and continues. You stay informed without getting stuck. The guides also suggest making it explicit that read-only, review, and reversible actions already carry implied authorization.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p5">On Fable’s side, the guardrail against excess, also from the official guide: "If, while working, you find a pre-existing bug or behavior that the task doesn’t mention, <strong class="text-amber-400">don't fix or extend this in this change</strong>; report it as an open item in the summary. Where the task is ambiguous, implement the interpretation best supported by the text, state your assumption, and don’t build for the other interpretations.” And the distinction that’s worth its weight in gold in operations: when the user is <em>describing</em> a problem or thinking aloud, the deliverable is the assessment—report it and stop; don't apply the fix before being asked.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p6">There's a second reason to write boundaries carefully, and it's security. A third-party reading that circulated this week sums it up well: <strong class="text-amber-400">“a prompt represents intent; a permission represents a constraint”</strong>. The stronger the model, the weaker “the prompt said not to” is as a control. High-risk boundaries (deploying, deleting, paying) also need to exist outside the text—in tool permissions, access, and the environment. The prompt says where to stop; the environment enforces it.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p7">The Authority pillar test is simple: read your list of rules and classify each one as <strong class="text-amber-400">stop</strong> (one of the three), <strong class="text-amber-400">permission</strong> (approved safe workflow) or <strong class="text-amber-400">crutch</strong> (a rule that exists because of an older model). The first stays and gains a guarantee in the environment. The second stays and gives it freedom. The third goes.</p>
+</div>
+<!-- SVG B: zona de autonomia -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="Autonomy zone: reversible actions proceed without asking; three gates stop the model: a destructive or irreversible action, a real change in scope, or information only the user has." class="w-full h-auto" role="img" viewbox="0 0 1000 260">
+<defs>
+<pattern height="32" id="d4b-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4b-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4b-grid)" height="260" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif">
+<rect fill="#12210f" height="180" rx="18" stroke="#34d399" stroke-width="2.5" width="560" x="40" y="40"></rect>
+<text fill="#6ee7b7" font-size="15" font-weight="700" text-anchor="middle" x="320" y="72">AUTONOMY ZONE — proceed without asking</text>
+<g fill="#d1fae5" font-size="12">
+<text x="70" y="104">• read, search, review, compare</text>
+<text x="70" y="128">• reversible actions that follow from the request</text>
+<text x="70" y="152">• choices about structure, format, and order</text>
+<text x="70" y="176">• named safe workflows (local tests, lint, build)</text>
+<text fill="#a7f3d0" font-style="italic" x="70" y="200">assumptions stated at the top, not asked about</text>
+</g>
+<line marker-end="url(#d4b-ah)" stroke="#fbbf24" stroke-width="2.5" x1="600" x2="660" y1="130" y2="130"></line>
+<g font-size="12" font-weight="600">
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="46"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="66">STOP 1</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="83">destructive or irreversible</text>
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="107"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="127">STOP 2</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="144">real change in scope</text>
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="168"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="188">STOP 3</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="205">information only you have</text>
+</g>
+<text fill="#fcd9a0" font-size="11" text-anchor="middle" x="500" y="246">stop = asks a question and ends the turn · never ends with a promise ("I’ll do it later…")</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Three gates. Everything else is within the zone of autonomy.</p>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Carpentry rules: prohibitions vs. authority</h3>
+<p class="text-sm text-neutral-400 italic mb-3">The Rules pillar of the day 3 customer service system, rewritten for the new generation.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ 2025 rules</h4>
+<p class="text-sm text-neutral-300">Never respond without consulting me. Always show me the draft before sending. Don't make any decisions on your own. No prices by email. No deadlines shorter than 30 days. If you're unsure, ask. Confirm every appointment with me.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ 2026 authority</h4>
+<p class="text-sm text-neutral-300">DECIDE ON ITS OWN: tone, response structure, which qualifying questions to ask, and propose up to 3 visit dates from the available schedule. If a missing detail won’t change the price or lead time, assume the default and state the assumption in the record. STOP AND CONTACT ME in 3 cases: (1) the customer requests a refund or cancellation (irreversible); (2) the request is out of scope — repair, another city, lead time under 30 days (scope change); (3) price or discount — only I have that information. FIXED LIMITS: never quote a price; never promise a lead time under 30 days. GUARANTEE: the assistant does not have access to the payment system or production schedule.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> The old version asks for a consultation about everything—in Astra, the assistant literally stops at every message; in Fable, it ignores the intent and improvises. The new one says what it can decide on its own, names the three checkpoints, and removes the guarantee that matters from the text (no access to payments). It works with both models because it describes authority, not steps.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Classify each rule as a stop, permission, or crutch — and act accordingly.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write the three stop points with examples from your case, and explicitly allow everything else.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Asking for assumptions to be stated at the top instead of asking questions.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ensure that high-risk boundaries are also enforced in the environment (access, permission), not just in the text.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Never ask anything” — forces a guess when a real decision is missing.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Always check with me” — blocks Astra and is ignored in spirit by Fable.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Trusting that "the prompt said not to do it" will prevent an irreversible action.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Accept a turn that ends with a promise (“I’ll do X next”) instead of doing it or asking a question.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">For each “ask first” rule that remains, write down the cost of the model stopping there 20 times a day. If the cost of stopping is greater than the cost of the error the rule prevents, it’s a crutch. If the error is irreversible, it’s a stop condition—and you need to enforce it outside the text.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Authority Pillar</h4><p class="text-xs text-neutral-400">Evolution of the Rules pillar: how far the model decides on its own and the exact situation in which it stops and calls you.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The three stops</h4><p class="text-xs text-neutral-400">Destructive/irreversible · real scope change · information only you have. Stop: ask and end, with no promises.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Stated assumption</h4><p class="text-xs text-neutral-400">Instead of asking, the model lists what it assumed and continues. Visibility without blocking — the antidote to Astra stopping too soon.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Intention ≠ imposition</h4><p class="text-xs text-neutral-400">A prompt says where to stop; permissions and access make sure you stop. The stronger the model, the less "I told it not to" works as a safeguard.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 4 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-4" id="topico-4">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">4</span>
+<h2 class="text-2xl font-bold">🏁 Definition of done and verification with evidence</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t4-p1">If the model takes care of the "how," the most valuable part of your text becomes the <strong class="text-amber-400">finish line</strong>. A guide about Astra sums it up: “the best prompt defines a finish line—it says what result to produce, what evidence governs the answer, what it can decide on its own, how the deliverable should be structured, and what to check before finishing.” The last two parts— <em>ready</em> e <em>verification</em> — are what separate a prompt that delivers work from one that returns a question.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p2"><strong class="text-amber-400">Definition of done</strong> is the test that <em>you</em> would apply before accepting. It’s not "a good report"; it’s "totals match the spreadsheet, change versus the previous week, three items with actions." Written this way, it does three things at once: gives the model a criterion for knowing when to stop, prevents it from stopping too soon (Astra) or going on too long (Fable), and becomes the day 3 validation checklist without extra work.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p3"><strong class="text-amber-400">Verification with evidence</strong> addresses a problem that has become more visible precisely because models now run for hours: fabricated progress reports. The Fable guide provides the instruction that, in Anthropic’s tests, "practically eliminated" this: "Before reporting progress, audit every claim against a tool result from this session. Only report work for which you can point to evidence; if something hasn’t been verified yet, say so explicitly. If tests failed, say so with the output; if a step was skipped, say so; when something is done and verified, state it without hedging."</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p4">There are a couple of new pitfalls. The first, on Astra's side: <strong class="text-amber-400">recognizing that you could do it doesn’t mean you’ve done it</strong>. Without this in writing, it sometimes responds with a competent plan and stops. The second, from Fable 5.1’s perspective: on long, asynchronous tasks, it may end the turn by describing the next step (“I’ll do this next…”) or asking permission for something already covered by the request (“should I apply it?”). The official guide gives this closing instruction: “Before ending, reread your last paragraph. If it’s a plan, a question, or a promise about work you haven’t done, do that work now.” This doesn’t apply to live pair work—it applies when you aren’t watching.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p5">Even better verification is the kind that <strong class="text-amber-400">isn't done by the person who produced it</strong>. The Fable guide is explicit: “separate verifiers with clean context tend to outperform self-critique.” For long tasks, the instruction is to establish a rhythm: “Set a method for checking your own work every [interval]; run it against the spec with subagents.” If you don’t use subagents, the equivalent is Day 3: have another person or another session run the checklist.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p6">Put the pieces together and you have the structure the Astra guides call <strong class="text-amber-400">six-part prompt</strong>, which is, in practice, our Day 2 Brief, updated: Outcome · Source of truth · Constraints · Authority · Output contract · Verification. “Outcome” prevents aimless analysis; “source of truth” controls the evidence; “constraints” define the solution’s boundaries; “authority” reduces unnecessary pauses; “output contract” makes the result usable; “verification” defines done.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p7">A note about sources that applies to anything using search: Fable 5.1 at low effort tends to answer from memory instead of searching. When the subject changes quickly (AI models are the guide’s own example), say that <strong class="text-amber-400">recognizing a name doesn’t mean knowing its current state</strong> and that it should look for before answering. It’s a definition of done for research: done includes having checked.</p>
+</div>
+<!-- SVG C: linha de chegada -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="The six-part prompt: Outcome, Source of truth, Constraints, Authority, Output contract, and Verification, aligned all the way to the finish line, where the model declares completion with evidence." class="w-full h-auto" role="img" viewbox="0 0 1000 230">
+<defs>
+<pattern height="32" id="d4c-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4c-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4c-grid)" height="230" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif" font-size="11" font-weight="600">
+<g>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="30" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="95" y="90">1. Outcome</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="95" y="108">what, and for whom</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="178" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="243" y="90">2. Source of truth</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="243" y="108">what takes precedence</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="326" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="391" y="90">3. Constraints</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="391" y="108">fixed limits</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="474" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="539" y="90">4. Authority</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="539" y="108">decides · 3 stops</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="622" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="687" y="90">5. Output contract</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="687" y="108">deliverable format</text>
+<rect fill="#1f1604" height="90" rx="12" stroke="#fbbf24" stroke-width="2.5" width="200" x="770" y="50"></rect><text fill="#fbbf24" font-size="13" text-anchor="middle" x="870" y="82">6. Verification</text><text fill="#fcd9a0" font-size="10" font-weight="400" text-anchor="middle" x="870" y="102">ready = a test you run</text><text fill="#fcd9a0" font-size="10" font-weight="400" text-anchor="middle" x="870" y="118">evidence before “done”</text>
+</g>
+<g opacity="0.6" stroke="#38bdf8" stroke-width="1.6"><line x1="160" x2="176" y1="95" y2="95"></line><line x1="308" x2="324" y1="95" y2="95"></line><line x1="456" x2="472" y1="95" y2="95"></line><line x1="604" x2="620" y1="95" y2="95"></line></g>
+<line marker-end="url(#d4c-ah)" stroke="#fbbf24" stroke-width="2" x1="752" x2="766" y1="95" y2="95"></line>
+<g opacity="0.8" stroke="#fbbf24" stroke-dasharray="6 5" stroke-width="2"><line x1="970" x2="970" y1="40" y2="150"></line></g>
+<text fill="#fbbf24" font-size="10" text-anchor="middle" transform="rotate(90 985 98)" x="985" y="98">FINISH LINE</text>
+<text fill="#fcd9a0" font-weight="400" text-anchor="middle" x="500" y="185">“Recognizing that you could do it isn’t the same as having done it.” · “If the last paragraph is a plan or a promise, do it now.”</text>
+<text fill="#a7f3d0" font-weight="400" text-anchor="middle" x="500" y="206">verifier with clean context &gt; self-critique by the person who produced it</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Six parts. The last two are the ones that return work instead of questions.</p>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Market research: "do a survey" vs. finish line</h3>
+<p class="text-sm text-neutral-400 italic mb-3">A consultant asks for a competitor analysis for a meeting tomorrow.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ No definition of done</h4>
+<p class="text-sm text-neutral-300">Do a thorough, accurate survey of my client's main competitors (an aesthetics clinic in Curitiba), including prices, differentiators, and weaknesses.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Clear definition of done and verification</h4>
+<p class="text-sm text-neutral-300">RESULT: a table of 6–8 competitors of aesthetic clinics in Curitiba for me to present to the client tomorrow. SOURCE OF TRUTH: each competitor’s official websites and profiles, checked today; if a price isn’t public, write “not published,” don’t estimate. AUTHORITY: choose which competitors to include and their order; assume the Batel neighborhood as the comparison area and state that at the top; don’t ask me. OUTPUT CONTRACT: table with name, neighborhood, 3 services with prices, one-sentence differentiator, one-sentence weakness, source link. DONE: every price cell has a link or says “not published”; no clinic without a source checked today. VERIFICATION: before delivering, reopen each link and confirm the price is there; list anything you couldn’t confirm.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> “Complete and accurate” isn’t testable — Astra will probably ask how many competitors and what radius; Fable at low effort might answer from memory. The second version defines the finish line, gets the question out of the way with a stated assumption, and requires reopening each source before saying it’s done. The result is a table you can defend in a meeting.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write “done” as the test you would apply yourself before accepting.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Require every progress claim to point to evidence from the session.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Separate the producer from the verifier (another session, subagent, or colleague).</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>For work that runs without you watching, end with "if the last paragraph is a promise, do it now".</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Be complete and accurate” as a criterion — it isn’t testable, so it turns into a question or a guess.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Accept “done” without pointing to evidence, especially in long runs.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Trusting the self-critique of the same model that produced it, in the same context.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep research effort low without instructing it to search before answering.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Write the definition of done before the request, not after. If you can’t write it in three testable lines, the problem isn’t the model — you still don’t know what you want, and the new model will return that uncertainty as a question.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Definition of done</h4><p class="text-xs text-neutral-400">The test you’d apply before accepting. It tells the model when to stop, prevents it from stopping too early or continuing too long, and already serves as the validation checklist.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Evidence or nothing</h4><p class="text-xs text-neutral-400">Every progress claim points to a real result from the session. If it hasn't been verified, say so.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Being able to do it ≠ having done it</h4><p class="text-xs text-neutral-400">A competent plan isn’t a deliverable. In autonomous work, the last paragraph can’t be a promise.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Six-part prompt</h4><p class="text-xs text-neutral-400">Outcome · Source of truth · Constraints · Authority · Output contract · Verification. It's the Day 2 Worksheet, updated.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 5 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-5" id="topico-5">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">5</span>
+<h2 class="text-2xl font-bold">🎚️ Effort, memory, and long-running work</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t5-p1">When the model handles the “how,” three controls are still yours, and the previous generation didn’t have them in quite the same way: <strong class="text-amber-400">how much it thinks</strong> (effort), <strong class="text-amber-400">what it remembers between rounds</strong> (file-based memory) and <strong class="text-amber-400">how it keeps you informed</strong> in work that lasts for hours. The three replace a lot of old instructions.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p2"><strong class="text-amber-400">Effort is the main control.</strong> Both houses use the same five-level scale — low, medium, high, extra high, and maximum — and mean the same thing: it’s the dial that trades intelligence for latency and cost. In Fable 5.1, the default is high (in Claude Code) or medium (in chat), and at medium it delivers what Fable 5 delivered at high, for less. At low, it competes on cost with smaller models and scores higher. The guide says to retest the scale with each generation: <em>the same level name doesn't mean the same amount of thinking across models</em>. Rule of thumb from the Astra guides: extraction and formatting at low; writing and routine changes at medium; multi-file work and long analysis at high; broad refactoring at extra-high; architecture decisions you’ll put into practice at maximum.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p3">High effort has a familiar side effect: on routine tasks, Fable "may gather context and deliberate beyond what the task requires" and be tempted to fix things no one asked for. The line in the guide that prevents this replaces ten rules: <strong class="text-amber-400">“Don’t add features, refactor, or introduce abstractions beyond what the task requires. Do the simplest thing that works well.”</strong> If the task gets done but takes too long, lower the effort level before changing the prompt.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p4"><strong class="text-amber-400">Memory becomes a file — and the model writes to it.</strong> The day 2 Memory pillar was what you stored for the AI to read. Now Fable “does particularly well when it can record lessons from previous runs and consult them.” The official instruction fits in three lines: “Keep one lesson per file with a one-line summary at the top. Record corrections and confirmed approaches, including why they mattered. Don’t store what the repository or history already records; update the existing note instead of duplicating it; delete notes that turn out to be wrong.” And to get started: “Reflect on our previous sessions, identify themes and lessons, and save them in [folder].” It’s the day 3 continuous improvement plan, except the system writes the log.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p5"><strong class="text-amber-400">Long work calls for a rhythm, not surveillance.</strong> Fable 5.1 writes <em>less</em> updates during long runs than Fable 5 — the user sees the agent disappear for minutes. The guide says to first delete old lines that suppressed narration ("save everything for the final answer") and only then ask: "Before starting, say in one line what you’re going to do; give brief updates as you work; finish with a self-contained summary." For agents that run without anyone watching, there’s also the "send to user" tool, which delivers an intact message mid-run — but the model rarely uses it unless the prompt says to.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p6"><strong class="text-amber-400">Delegation has become the default.</strong> Fable dispatches parallel subagents more easily than earlier versions; the guide recommends using them often, stating when delegation is appropriate, and preferring asynchronous communication—the orchestrator keeps working while they run and steps in if one goes off track. For you, who may not build any agents, the lesson is the same as on day 3: break the system into steps that can run in parallel, and separate the work of producing from the work of checking.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p7">Finally, the money. 5.1 lowered the price of reading from cache, which is what makes long tasks cost up to 45% less. A practical consequence mentioned in the guide itself: compacting the history early to save money "may no longer be the right tradeoff"—try compacting later. And the course’s old advice still holds: use the lowest effort level that meets the definition of done for the task. Run it at two levels and compare against the definition of done; that tells you more about your case than any benchmark.</p>
+</div>
+<!-- tabela de esforço -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">The five levels of effort (rule of thumb, September 2026)</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm text-left border border-dark-600 rounded-lg overflow-hidden">
+<thead class="bg-dark-800 text-neutral-300"><tr><th class="px-4 py-2.5 font-semibold">Level</th><th class="px-4 py-2.5 font-semibold">It's for</th><th class="px-4 py-2.5 font-semibold">Caution</th></tr></thead>
+<tbody class="divide-y divide-dark-600 text-neutral-300">
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">low</td><td class="px-4 py-2.5">extraction, formatting, renaming, transcription — an obvious answer</td><td class="px-4 py-2.5 text-neutral-400">Fable 5.1 searches less and answers from memory; ask it to search for topics that change quickly</td></tr>
+<tr><td class="px-4 py-2.5 text-amber-400 font-semibold">medium</td><td class="px-4 py-2.5">writing, routine research, standard changes, email, and documents</td><td class="px-4 py-2.5 text-neutral-400">in 5.1 ≈ Fable 5 at high, cheaper; default in chat</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">high</td><td class="px-4 py-2.5">multi-file work, long-document analysis, competitive research</td><td class="px-4 py-2.5 text-neutral-400">Claude Code 5.1 default; recommended starting point</td></tr>
+<tr><td class="px-4 py-2.5 text-amber-400 font-semibold">extra-high</td><td class="px-4 py-2.5">broad refactoring, debugging what "high" didn’t fix, messy data</td><td class="px-4 py-2.5 text-neutral-400">tendency to fix things nobody asked for; use the phrase “simplest thing that works”</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">maximum</td><td class="px-4 py-2.5">architecture decision, difficult math, trade-off you’re going to implement</td><td class="px-4 py-2.5 text-neutral-400">may "draft" the entire deliverable while thinking and write it again; leave room for tokens</td></tr>
+</tbody>
+</table>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Memory: static base vs. lessons file</h3>
+<p class="text-sm text-neutral-400 italic mb-3">The Memory pillar of the woodworking assistant, before and after.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ 2025 memory</h4>
+<p class="text-sm text-neutral-300">Memory: approved response template, list of neighborhoods served, 10 qualifying questions. (Updated by the owner when they remember. Never records what went wrong.)</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ 2026 memory</h4>
+<p class="text-sm text-neutral-300">Base memory: same as before. + LESSONS FOLDER (you read it at the start and write to it at the end of each round): one lesson per file, with a one-line summary at the top; record corrections I make and approaches I confirm, with the reason; don't save what the catalog or history already says; update instead of duplicating; delete anything that turns out to be wrong. Today's lessons: "customer from downtown asked about the timeline 3× — answer the timeline in the 1st message" · "repair request: decline and recommend a partner, don't just decline". EFFORT: medium for responding; high only when the case falls into a stopping point.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> The old memory is static and depends on the owner remembering. The new one is a loop: the system records what it learned, with a clear rule for what goes in and what comes out, and the next service interaction starts out smarter. It’s the day 3 continuous improvement plan running on its own—and matching effort to the type of case cuts costs without sacrificing quality.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Start at the standard effort level and run the same case one level lower; keep the lowest level that passes the ready check.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Give the system a lessons folder with rules for adding, updating, and discarding lessons.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Asking for progress updates during long work—and first deleting the lines that suppressed narration.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Run everything at maximum 'just to be safe'—it costs more and invites changes you didn't ask for.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Reusing one generation’s effort calibration in the next without retesting.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Memory without a rule for discarding information — it becomes junk the model obeys.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Today, create a "licoes/" folder alongside your system and put the first lesson in it: the hole you fixed on day 3, and why. Then tell the system to read the folder at the start of every run. In two weeks, you’ll have a record no 2025 prompt had.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Effort is the button</h4><p class="text-xs text-neutral-400">Five levels, the same scale in both places. The lowest level that passes the ready check is the right one. Re-test with every generation.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The simplest thing that works</h4><p class="text-xs text-neutral-400">The phrase that keeps excess in check during high-effort work: no functionality, refactoring, or abstraction beyond what the task requires.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">One lesson per file</h4><p class="text-xs text-neutral-400">Memory that the system reads and writes, with rules for adding, updating, and discarding information. The day 3 improvement plan running on its own.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rhythm, not surveillance</h4><p class="text-xs text-neutral-400">A note beforehand, brief updates along the way, a self-contained summary at the end. When working without anyone watching, keep the message intact midway through the run.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 6 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-6" id="topico-6">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">6</span>
+<h2 class="text-2xl font-bold">🔁 Project: Migrate to the Intent Sheet v2</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t6-p1">You left day 3 with a System Sheet run and validated. Today it won’t go in the trash: it will <strong class="text-amber-400">migrate</strong>. Each pillar in Brief v1 has a place in Intent Brief v2, and the migration exercise shows exactly what was a crutch, what was a boundary, and what was missing. At the end, you run the same real case in both formats and compare them—that comparison is your proof that you understand the shift.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p2"><strong class="text-amber-400">Step 1 — Audit by subtraction.</strong> Take System Sheet v1 and the prompt/document that runs the system. Go line by line, asking: "Does today’s model still need this?" Mark each as a crutch, boundary, or permission. Delete the crutches. Note how many lines you removed—that’s your debt paid number.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p3"><strong class="text-amber-400">Step 2 — Rewrite Context as the source of truth.</strong> From the context on day 2, separate what is <em>authoritative</em> (the catalog, the delivery-time table, the policy) rather than just a description. Say which source takes precedence in case of conflict and what to do when information is missing: flag the discrepancy, don’t make anything up.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p4"><strong class="text-amber-400">Step 3 — Turn Rules into Authority.</strong> Write what the system decides on its own, the three stop points with examples from your case, and the fixed limits that remain. For each high-risk stop point, note where it is enforced outside the text (access, permission, environment).</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p5"><strong class="text-amber-400">Step 4 — Write Done and Verification.</strong> Your Day 3 validation checklist becomes the definition of done: the test you apply before accepting. Add the requirement for evidence ("only report what you can point to; for anything unverified, say you didn't verify it") and assign verification to someone separate from the person producing the work.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p6"><strong class="text-amber-400">Step 5 — Adjust Effort and install the lessons folder.</strong> Choose the effort level for each type of case (routine at medium, shutdown at high, for example). Create the lessons folder with rules for adding, updating, and discarding lessons, and put in it the first gap you fixed on day 3.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p7"><strong class="text-amber-400">Step 6 — Run the same case in both formats and compare.</strong> Take the real case from day 3. Run it with System Sheet v1 and v2, preferably on the same model and, if you can, on two models (one from Anthropic, one from OpenAI). Note: Did it ask or act? Did it stop where it should? Did it meet the done criteria? How many instruction lines did it use? This comparison table, together with the completed System Sheet v2, is your day 4 deliverable.</p>
+</div>
+<!-- mapa de migracao -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Migration map — v1 Worksheet (day 3) → v2 Intent Worksheet</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm text-left border border-dark-600 rounded-lg overflow-hidden">
+<thead class="bg-dark-800 text-neutral-300"><tr><th class="px-4 py-2.5 font-semibold">Pillar (day 2/3)</th><th class="px-4 py-2.5 font-semibold">It shifts in v2</th><th class="px-4 py-2.5 font-semibold">What changes in the writing</th></tr></thead>
+<tbody class="divide-y divide-dark-600 text-neutral-300">
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Context</td><td class="px-4 py-2.5 text-amber-400">Source of truth</td><td class="px-4 py-2.5 text-neutral-400">only what's authoritative; which source takes precedence; flag discrepancies instead of making things up</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Objectives</td><td class="px-4 py-2.5 text-amber-400">Outcome + Ready</td><td class="px-4 py-2.5 text-neutral-400">what gets done, for whom, and the test you apply before accepting it</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Rules</td><td class="px-4 py-2.5 text-amber-400">Authority + Constraints</td><td class="px-4 py-2.5 text-neutral-400">decides on its own · 3 stops · fixed limits · guarantee outside the text</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Memory</td><td class="px-4 py-2.5 text-amber-400">Knowledge base + lessons folder</td><td class="px-4 py-2.5 text-neutral-400">the system reads and writes; one lesson per file; discard rule</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Validation</td><td class="px-4 py-2.5 text-amber-400">Verification with evidence</td><td class="px-4 py-2.5 text-neutral-400">every claim points to evidence; separate verifier; final paragraph isn’t a promise</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Workflow (day 3)</td><td class="px-4 py-2.5 text-amber-400">Output Contract + Effort</td><td class="px-4 py-2.5 text-neutral-400">the “how” is up to the model; you set the deliverable format and effort level for each type of case</td></tr>
+</tbody>
+</table>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ready-to-use example — Carpentry: Spec Sheet v1 vs. Intent Sheet v2</h3>
+<p class="text-sm text-neutral-400 italic mb-3">The day 3 customer service system, migrated.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Sheet v1 (it ran, but with crutches)</h4>
+<p class="text-sm text-neutral-300">Context: custom woodworking, 30-day lead time, quote only after a site visit. Goal: schedule a visit. Rules: no pricing; no lead time under 30 days; decline repairs; confirm service area; <em>always show me before sending; ask if you're unsure</em>. Memory: model, neighborhoods, questions. Workflow: receive → classify → qualify → draft (agent iterates until it passes or 2×) → validate → send/escalate. Validation: 6 items.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Intention Sheet v2</h4>
+<p class="text-sm text-neutral-300">RESULT: a response that schedules a service visit for someone who contacts you by email. SOURCE OF TRUTH: the timeline table and neighborhood list (official spreadsheet); if the neighborhood isn’t on the list, say you’ll confirm—don’t assume. AUTHORITY: decide the tone, questions, and up to 3 dates; assume a default for details that don’t change the price or timeline and state it; STOP for refunds/cancellations, out-of-scope requests, and any mention of a price. CONSTRAINTS: never mention a price; never give a timeline under 30 days. OUTPUT CONTRACT: email of up to 8 lines, one qualifying question, proposed date. DONE: proposes a visit · no price · 30-day timeline · area confirmed · friendly tone · 1 question. VERIFICATION: before sending, check each DONE item against the source; flag anything you couldn’t verify. EFFORT: medium; high if a stopping point is reached. MEMORY: knowledge base + licoes/ folder (read at the start, write at the end). DELETED LINES: 4 (show first, ask if unsure, iterate 2×, “never make things up”).</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Why it changes:</strong> The old version worked with a 2025 model because it needed the workflow laid out. In v2, the workflow disappeared—the model builds the path—and what remains is verifiable intention: the result, what takes precedence, how far it goes, and how to know it’s done. Four crutches were removed; two checkpoints got names; memory started learning. Run on the same Centro case, the new model answered the deadline and region right away, without asking or improvising.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Migrate pillar by pillar, keeping v1 for comparison.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Run the same real case in both formats and record the comparison.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Count the deleted lines — that’s the metric for the shift.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Add the date to the v2 Record: what is true today will be re-audited in the next generation.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Throw away v1—it’s the baseline for comparison.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Migrate only the text without running it — subtraction without rerunning is just a guess.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep the step-by-step workflow inside v2 “for safety”—that’s the crutch sneaking back in through the back door.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Declare the migration ready without filling in the comparison table.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">If you can only test one model, test it anyway — at two effort levels. If you can test two models, you'll see the pattern from this lesson live: v1 makes one model stop and the other improvise; v2 gets both to deliver. It's the best lesson there is on why intention travels across tools and steps don't.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Migrate, don't throw it away</h4><p class="text-xs text-neutral-400">Every pillar from v1 has a place in v2. The migration reveals what was a crutch, a boundary, and what was missing.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The workflow goes to the model</h4><p class="text-xs text-neutral-400">You set the deliverable’s format and effort; the model puts together the path. In v2, the flow is a crutch in disguise.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Same case, two formats</h4><p class="text-xs text-neutral-400">The v1 × v2 comparison using day 3’s real-world case proves the shift—and is the day 4 deliverable.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Dated brief</h4><p class="text-xs text-neutral-400">What’s valid in Sep/2026 will be reaudited in the next generation. The method stays; the facts expire.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+</article>
+<!-- ====================== EXERCICIOS ====================== -->
+<section class="mb-14">
+<h2 class="text-2xl font-bold mb-2">🛠️ Practical Exercises</h2>
+<p class="text-neutral-400 mb-6 inema-prose">Use the System Brief you put together on day 3. The answer key follows the woodworking shop case; your case is the one that matters.</p>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Exercise 1 — Audit by subtraction</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Separate the crutch, boundary, and permission in what you've already written, and remove the crutches.</p>
+<p class="text-neutral-300 mb-4">Take the prompt/document that runs your system (or your System Sheet v1). For each line that begins with "always," "never," "before," "after," "first," "ask," or "show," answer: "Does the model I use today still need this?" Classify and count them.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>List all the instruction lines in your system, numbered.</li>
+<li>Mark each one as CRUTCH (it existed because of a weak model), BOUNDARY (the action is genuinely risky), or PERMISSION (allows a safe workflow).</li>
+<li>Remove the crutches. Count how many you removed.</li>
+<li>For each boundary, note which of the three stop conditions it falls under.</li>
+<li>If no permissions remain, write one: a safe, repeatable workflow that's fully authorized.</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">SYSTEM: customer service assistant for the woodworking shop (Form v1).
+
+1. "Always show me the draft before sending" → CRUTCH (created when the old model got the tone wrong). Remove it.
+2. "Ask if you have a question" → CRUTCH (generic; becomes "state your assumption and proceed"). Remove it.
+3. "Never quote a price by email" → BOUNDARY · stop 3 (only the owner knows the price). Keep it.
+4. "Never promise a turnaround under 30 days" → FIXED CONSTRAINT. Keep it.
+5. "Politely decline repair requests" → PERMISSION (the model decides how). Keep it, rewritten: "out of scope = stop 2; reply with a partner recommendation".
+6. "Iterate on the draft until it passes or you reach 2 attempts" → CRUTCH (the model checks it against the ready criteria on its own). Remove it.
+7. "Never make up information" → CRUTCH (becomes a source of truth: "if it isn't in the spreadsheet, say you'll confirm"). Remove it as a rule; add it as a source.
+8. "Confirm the area before suggesting a visit" → LIGHT BOUNDARY → becomes an item in PRONTO.
+
+REMOVED: 4 of 8. NEW PERMISSION: "You decide the tone, questions, and up to 3 available appointment dates without consulting me."</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: If you’re unsure whether a line is a crutch or a boundary, ask, “What’s the worst case if the model ignores this?” If the worst case is reversible, it’s a crutch. If it’s irreversible, costs money, or harms someone, it’s a boundary.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Exercise 2 — Rules become Authority</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Rewrite the Rules pillar as an autonomy zone + three stopping points + a guarantee outside the text.</p>
+<p class="text-neutral-300 mb-4">Using what's left from Exercise 1, write the AUTHORITY block for your system in three parts: what it decides on its own (with examples), the three stops with a concrete example from your case for each, and where each high-risk stop is enforced outside the text.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Write “DECIDE ON YOUR OWN:” and list 3-5 decisions you currently make for it.</li>
+<li>Write “STOP AND CALL ME:” with a real example for each of the three stop points.</li>
+<li>Write the assumption instruction: “if data is missing that doesn’t change X or Y, assume the default and state it.”</li>
+<li>For each high-risk stop condition, note the SAFEGUARD outside the text (access it doesn’t have, mandatory approval in the tool).</li>
+<li>Reread: is there any 'always consult me' left? If so, go back to step 1.</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">AUTHORITY — woodworking shop assistant
+
+DECIDES ON ITS OWN: email tone and structure; which of the 10 qualifying questions to use (1 per email); propose up to 3 dates from the open calendar; answer material questions based on the catalog; recommend a repair partner.
+
+ASSUMPTION: if a detail is missing that does not change the price or timeline (e.g., color, finish), assume the catalog default and state it in the record: "assumed a matte finish".
+
+STOP AND ASK ME:
+- Stop 1 (irreversible): the customer requests a cancellation, refund, or change to an order already in production.
+- Stop 2 (scope): a small repair, delivery outside the metro area, a requested timeline under 30 days, a project over 20 m².
+- Stop 3 (only I know): any question about price, discount, or installments.
+When stopping: tell the customer you’ll confirm and send me the case with the exact question. Don’t end with "I’ll look into it later".
+
+GUARANTEE OUTSIDE THE TEXT: the assistant has no access to the payment system, price list, or production schedule — only the visit calendar and catalog.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: The “DECIDE ON ITS OWN” section is usually the hardest to write—because it requires admitting what you were holding onto unnecessarily. Start with decisions where, in the last 30 days, you always approved what it proposed.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Exercise 3 — Definition of done and verification</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Turn Day 3’s validation checklist into a testable definition of done, requiring evidence and a separate verifier.</p>
+<p class="text-neutral-300 mb-4">Rewrite your checklist as DONE (the test you apply before accepting) and add the VERIFICATION block: how the model checks each item against the source, what it does with anything it couldn’t verify, and who verifies it besides the model.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>For each checklist item, rewrite it so you can answer yes or no by looking at the result.</li>
+<li>Remove adjectives you can't test ("good," "complete," "accurate") and replace them with measures.</li>
+<li>Write the evidence requirement: “only report what you can point to; say what hasn’t been verified.”</li>
+<li>Define the separate verifier: another session, another person, or a subagent with a clean context.</li>
+<li>Add a closing statement for autonomous work: “if the last paragraph is a plan or promise, do it now.”</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">READY — quote response from the woodworking shop (yes/no for each item):
+[ ] proposes a visit with at least 1 specific date
+[ ] contains no amounts in R$ and no use of the word “discount”
+[ ] gives “30 days” as the production time (not “about,” not “3 weeks”)
+[ ] the customer’s neighborhood is on the service-area list OR the response says “I’ll confirm whether we serve your area”
+[ ] exactly 1 qualifying question
+[ ] up to 8 lines; starts with the customer’s name
+
+VERIFICATION:
+- Before sending, check each item above against the official spreadsheet (timelines and neighborhoods) and the response text. Mark “passed” only for items you can point to. If you couldn’t verify the neighborhood, mark “not verified” and use the confirmation sentence.
+- Separate verifier: every Friday, another session (without the week’s history) checks 5 sent responses against this READY checklist and records the gaps in licoes/.
+- Wrap-up: if your last line is “I’ll confirm the neighborhood later” or “Can I send this?”, don’t stop—confirm or send it now; ask only if one of the three stop conditions applies.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: A good way to check whether DONE is testable: ask someone who doesn’t know the system to evaluate a response using only the list. If they need to ask you, “What counts as courteous?”, the item is still an adjective.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Exercise 4 — Effort and lessons folder</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Choose the effort level for each type of case and install the memory the system writes.</p>
+<p class="text-neutral-300 mb-4">Run a real case through your system at two effort levels (the default and one below) and compare the results against PRONTO. Then create the lessons folder with rules for adding, updating, and discarding lessons, and record the first lesson in it.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Run the same case at the default effort level and one level below. Note: did it pass PRONTO? How long did it take? Cost (if visible)?</li>
+<li>Set the effort by case type: routine, case that triggers a stop, weekly review.</li>
+<li>Create a lessons folder and write the rule: one lesson per file, summary at the top, what to include, when to update, and when to delete.</li>
+<li>Record the first lesson: the gap fixed on day 3, and why.</li>
+<li>Add to the system: “read the folder at the start of every run; when finished, record corrections and confirmations.”</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">EFFORT COMPARISON — “kitchen cabinet, downtown” case:
+- high: passed all 6 items; 41 s; 7-line reply.
+- medium: passed all 6 items; 12 s; 6-line reply.
+→ EFFORT SET TO: medium for routine cases; high when the case hits a stop (refund, out of scope, amount); high for Friday’s review.
+
+lessons/ FOLDER — RULE (file 00-regra.md):
+One lesson per file, short name, first line = summary. Include: a correction the owner made; an approach the owner approved; a gap found in Friday’s review — always with the reason. Don’t include: anything already in the catalog, spreadsheet, or email history. Update the existing file instead of creating another on the same topic. Delete what the review shows is wrong.
+
+licoes/prazo-na-primeira-resposta.md:
+“Give the 30-day timeline in the 1st reply — the downtown customer asked 3× (day 3). Why: timing is the 2nd most common question and avoids back-and-forth.”
+
+SYSTEM INSTRUCTION: “At the start of each round, read licoes/. At the end, record in licoes/ any corrections I made and approaches I approved, following 00-regra.md.”</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: If the level below passes the DONE criteria, stick with it—the Fable guide says low and medium on 5.1 perform better than high on earlier generations. Only move up when an item in DONE fails, and note that as a lesson.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Exercise 5 — Intent Sheet v2 + comparison (project of the day)</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Consolidate exercises 1-4 in the Intention Sheet v2 and prove the shift by running the same case in both formats.</p>
+<p class="text-neutral-300 mb-4">Fill in Intention Sheet v2 (template below) for your system. Run the real day 3 case with Intention Sheet v1 and v2, then fill in the comparison table. If you can, run it on two models. This is your day 4 deliverable.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Fill in the sections: Result, Source of truth, Constraints, Authority, Output contract, Done, Verification, Effort, Memory.</li>
+<li>Record the “deleted lines” (from Exercise 1) and the date of the Worksheet.</li>
+<li>Run the real case with v1 and note: did it ask or act? did it stop where it should? did it pass READY? how many instruction lines?</li>
+<li>Run the same case with v2 and note the same four things.</li>
+<li>Write a concluding line: what v2 changed in the behavior, and what still failed (that becomes a lesson).</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">INTENT SHEET v2 — Customer service assistant for the woodworking shop · Sep 5, 2026
+
+RESULT: email that schedules a technical visit for customers who reach out by email; the owner decides the week’s schedule based on it.
+SOURCE OF TRUTH: official spreadsheet (timelines, neighborhoods, catalog). Missing data = “I’ll confirm,” never an estimate.
+CONSTRAINTS: no amounts in R$; timeline never under 30 days; up to 8 lines.
+AUTHORITY: decides on tone, 1 question, up to 3 dates; assumes the catalog default for data that doesn’t change the price/timeline and states it. Stops at: cancellation/refund · out of scope · price.
+OUTPUT CONTRACT: ready-to-send email + 1-line record (assumptions, any unverified DONE item).
+DONE: 6 yes/no items (Exercise 3).
+VERIFICATION: check each item against the source before sending; state what hasn’t been verified; Friday review in a separate session.
+EFFORT: medium (routine) · high (blocker and review).
+MEMORY: knowledge base + lessons/ (read at the start, write at the end, rule 00).
+LINES REMOVED: 4.
+
+COMPARISON — case “kitchen cabinet, how much does it cost, Center”:
+                   v1 (day 3)                        v2 (day 4)
+Asked or did?       Astra: asked “can I send it?”      Did it; stated “I assumed a matte finish”
+                    Fable: did it, but said “3 weeks”
+Stopped where it should? Didn’t stop when price was mentioned Stopped: “I’ll confirm the prices” + case sent to the owner
+Passed DONE?        4/6                                 6/6
+Instruction lines:  14                                  9
+
+CONCLUSION: v2 got both models to deliver without asking and stop at the right time (price). Still failed: in a 2nd round, the model proposed a date on a holiday → new lesson: “visit schedules must exclude holidays” (add it to the source of truth, not as a rule).</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: The conclusion line is the most valuable part: it tells you whether the gap was in the intention (you didn’t say what you wanted) or the source (data was missing). It’s almost never a missing step. If you catch yourself wanting to add a step, go back to Exercise 1.</p>
+</div>
+</section>
+<!-- ====================== TEMPLATE ====================== -->
+<section class="mb-14">
+<div class="bg-gradient-to-br from-amber-900/20 to-dark-800 rounded-xl border border-amber-500/30 p-6 sm:p-8">
+<h2 class="text-2xl font-bold mb-2 flex items-center"><span class="mr-2">🧭</span>Intent Brief v2 + Comparison Table</h2>
+<p class="text-neutral-300 mb-6 inema-prose">The System Brief from day 3, updated for the September 2026 generation. Less “how,” more “what, how far, and how to know it’s done.” Fill one out per system, date it, and run the same case in both formats.</p>
+<div class="space-y-3">
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">System name · Worksheet date · model(s) it was tested with</div><div class="text-neutral-300 text-sm">Example: Marcenaria Cedro customer service assistant · 5/Sep/2026 · Fable 5.1 (medium) and GPT-6 Astra (medium)</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">RESULT (what will be ready, for whom, and what decision it will support)</div><div class="text-neutral-300 text-sm">Example: Email that schedules a technical visit for a customer who reaches out by email; the owner uses it to build the week’s schedule</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">SOURCE OF TRUTH (what is authoritative · what to do when data is missing)</div><div class="text-neutral-300 text-sm">Example: Official spreadsheet of timelines, neighborhoods, and catalog. Missing data = “I’ll confirm,” never an estimate</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">CONSTRAINTS (fixed limits left after the subtraction)</div><div class="text-neutral-300 text-sm">Example: No amounts in R$; timeline never under 30 days; up to 8 lines</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">AUTHORITY — decides on its own (3–5 items) · stated assumption · three stops with examples · guarantee outside the text</div><div class="text-neutral-300 text-sm">Example: Decides on tone, 1 question, up to 3 dates. Assumes the catalog default and states it. Stops at cancellation/refund · out of scope · price. Guarantee: no access to payment or price table</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">OUTPUT CONTRACT (exact form of the deliverable)</div><div class="text-neutral-300 text-sm">Example: Ready-to-send email + 1-line record of assumptions and unverified items</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">READY (4-6 yes/no items you would check before accepting)</div><div class="text-neutral-300 text-sm">Example: [ ] proposes a visit with a date; [ ] no R$; [ ] “30 days” stated verbatim; [ ] neighborhood is on the list or says “I’ll confirm”; [ ] 1 question; [ ] up to 8 lines</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">VERIFICATION (evidence before concluding · separate verifier · close without promises)</div><div class="text-neutral-300 text-sm">Example: Check each item against the source; say when something hasn’t been verified; Friday review in a separate session; the last paragraph is never "I’ll do it later…"</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">EFFORT (by type of case)</div><div class="text-neutral-300 text-sm">Example: medium during routine work · high when it hits a blocker · high during the weekly review</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">MEMORY (a foundation + a lessons folder with rules for adding, updating, and discarding entries)</div><div class="text-neutral-300 text-sm">Example: Base (model, neighborhoods, questions) + licoes/ read at the start and written to at the end; rule in 00-regra.md</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">LINES REMOVED during subtraction (number + which ones)</div><div class="text-neutral-300 text-sm">Example: 4 — "show before sending", "ask if unsure", "iterate 2×", "never make things up"</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">COMPARISON TABLE v1 × v2 (same real case): asked or acted? · stopped where it should? · passed the DONE test? · instruction lines</div><div class="text-neutral-300 text-sm">Example: v1: asked / didn’t stop at the price / 4 of 6 / 14 lines · v2: completed with stated assumption / stopped at the price / 6 of 6 / 9 lines</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">CONCLUSION in 1 line + new lesson for licoes/</div><div class="text-neutral-300 text-sm">Example: v2 got both models to deliver and stop at the right time; the remaining gap (date on a holiday) goes into the source of truth</div></div>
+</div>
+</div>
+</section>
+<!-- ====================== CHECAGEM ====================== -->
+<section class="mb-14">
+<div class="inema-check bg-dark-800 border border-dark-600 rounded-xl p-6" data-inema-check="modulo-1-4#q1">
+<p class="font-medium mb-4">A model from the Sep/2026 generation stopped midway through the task and asked “can I continue?” for a step that the request already covered. Which correction best aligns with the Intention Architecture?</p>
+<div class="inema-check-options space-y-2">
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="0" type="button">Add the rule “never ask questions” to the prompt</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="1" type="button">Rewrite the authority: what it decides on its own, the three stopping points, and “state assumptions and proceed” for everything else</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="2" type="button">Detail the complete step-by-step task so it has no questions</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="3" type="button">Raise the effort to maximum, because at high effort it doesn't ask</button>
+</div>
+<div aria-live="polite" class="mt-4 text-sm" data-inema-check-feedback="" role="status"></div>
+</div>
+</section>
+<!-- ====================== FACILITADOR ====================== -->
+<section class="mb-14">
+<details class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<summary class="cursor-pointer font-semibold text-neutral-200">🎓 To make things easier live (in-person mode)</summary>
+<div class="mt-4 space-y-3 text-sm text-neutral-300">
+<p><strong class="text-amber-400">Total time:</strong> 120 min.</p>
+<p><strong class="text-amber-400">Activity:</strong> Workshop “The Shift” in pairs, with each pair having access to a September 2026 model (ideally one pair with Fable and another with Astra, so they can compare). Opening (15 min): the facilitator runs the same 2025 step-by-step prompt live in both models and shows the opposite errors—one asks questions, the other improvises. Block 1 — Subtraction (25 min): each participant audits their own v1 Worksheet line by line and announces how many lines they deleted; the facilitator records the numbers on the board. Block 2 — Authority and Ready (35 min): in pairs, one person writes the other’s AUTHORITY block based on what they hear; then they switch and write the READY section—the person writing for their partner doesn’t know the system, which exposes adjectives that can’t be tested on the spot. Block 3 — Comparative Round (30 min): each person runs their real Day 3 case with v1 and v2 and fills in the table; pairs with different models exchange Worksheets and run them again. Wrap-up (15 min): each pair presents one row from the comparison table and the new lesson added to licoes/. Close the immersion with the dated v2 Worksheet.</p>
+<p><strong class="text-amber-400">Materials:</strong> Each participant's v1 Brief (prerequisite, from day 3); Intent Brief v2 printed on A3; comparison table on A4; 3 colors of sticky notes (red = crutch, yellow = boundary, green = permission); access to a Sep/2026 model for each pair; the two companies' official prompting guides open on the big screen; timer.</p>
+<div>
+<p class="font-semibold text-neutral-200 mb-2">Discussion questions:</p>
+<ul class="list-disc list-inside space-y-1.5 text-neutral-300">
+<li>How many lines did you delete—and which one were you most reluctant to delete? Why?</li>
+<li>Which of the three stopping points was hardest to illustrate in your case? What does that say about your system’s real risk?</li>
+<li>When your colleague wrote your DONE without knowing the system, what non-testable adjective appeared?</li>
+<li>In the comparison table, was the change due to the model's behavior or to the clarity of your intention?</li>
+<li>The facts from today will be outdated in the next generation. What parts of your method will survive—and how will you know when it’s time to audit again?</li>
+</ul>
+</div>
+</div>
+</details>
+</section>
+<!-- ====================== FONTES ====================== -->
+<section class="mb-14">
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<h2 class="text-xl font-bold mb-2">📚 Sources Consulted</h2>
+<p class="text-sm text-neutral-400 mb-4">Valid as of 5/Sep/2026. Primary sources (from the manufacturers) come first; the others are third-party reading and are marked. The Astra behaviors cited here come from OpenAI’s guidance as reproduced by these guides.</p>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Prompting Claude Fable 5</strong> (official guide): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5" rel="noopener" target="_blank">platform.claude.com/docs/…/prompting-claude-fable-5</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Prompting Claude Fable 5.1</strong> (official guide): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1" rel="noopener" target="_blank">platform.claude.com/docs/…/prompting-claude-fable-5-1</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Introducing Claude Fable 5.1 and Claude Mythos 5.1</strong> (announcement, 1/Sep/2026): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.anthropic.com/claude-fable-and-mythos-5-1" rel="noopener" target="_blank">anthropic.com/claude-fable-and-mythos-5-1</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>OpenAI — GPT-6 Astra System Card</strong> (primary): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://deploymentsafety.openai.com/gpt-6-astra" rel="noopener" target="_blank">deploymentsafety.openai.com/gpt-6-astra</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — explainx.ai, “GPT-6 Astra Skills &amp; AGENTS.md Prompting Guide” (summarizes the Codex team’s post from Sep 5, 2026): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.explainx.ai/blog/gpt-6-astra-skills-agents-md-prompting-guide-2026" rel="noopener" target="_blank">explainx.ai/blog/gpt-6-astra-skills-agents-md-prompting-guide-2026</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — Elser AI, “GPT-6 Astra Prompt Guide” (six-part prompt): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.elser.ai/blog/gpt-6-astra-prompt-guide" rel="noopener" target="_blank">elser.ai/blog/gpt-6-astra-prompt-guide</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — lmspedia, “How to Prompt GPT-6 Astra: 12 Examples” (effort levels, habit of asking questions): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://lmspedia.org/how-to-prompt-gpt-6-astra/" rel="noopener" target="_blank">lmspedia.org/how-to-prompt-gpt-6-astra</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — Ken Huang, “Claude Fable 5: What Changed, and How to Stop Prompting It Like Opus”: <a class="text-sky-400 hover:text-sky-300 break-all" href="https://kenhuangus.substack.com/p/claude-fable-5-what-changed-and-how" rel="noopener" target="_blank">kenhuangus.substack.com/p/claude-fable-5-what-changed-and-how</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — Pat McGuinness, “Claude Fable 5.1, GPT-6 Astra, and the New AI Model Stack” (overview of releases and capabilities): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://patmcguinness.substack.com/p/claude-fable-51-gpt-6-astra-and-the" rel="noopener" target="_blank">patmcguinness.substack.com/p/claude-fable-51-gpt-6-astra-and-the</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Third parties</em> — Wikipedia, “GPT-6 Astra” (release dates): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://en.wikipedia.org/wiki/GPT-6_Astra" rel="noopener" target="_blank">en.wikipedia.org/wiki/GPT-6_Astra</a></span></li>
+</ul>
+</div>
+</section>
+<!-- ====================== RESUMO ====================== -->
+<section class="mb-8">
+<div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-xl border border-amber-500/30 p-8">
+<h2 class="text-2xl font-bold mb-6 flex items-center"><span class="mr-3">✅</span>Day 4 Summary</h2>
+<ul class="space-y-3 text-neutral-200 mb-7">
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Sep/2026 brought Fable 5.1 and GPT-6 Astra: models that follow instructions so well that prompts with steps have become noise. The manufacturers say to subtract; the opposite errors (doing too much, stopping too soon) have the same cause — the model obeys the text, not the intention.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Engineering by subtraction: line by line, “does today’s model still need this?” Remove the crutch; keep the boundary; add permission with guardrails. After cutting, run it again.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Rules become Authority: what it decides on its own, the three stop points (irreversible, scope, only you know), stating assumptions instead of asking—and the high-risk safeguard outside the text.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Done is the test you’d apply before accepting; verification requires evidence, a separate verifier, and a final paragraph that isn’t a promise. Being able to do it isn’t the same as having done it.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Effort is the main button (five levels, retest with each generation); memory becomes a lessons folder the system writes to; long-running work calls for a cadence of updates, not surveillance.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>The deliverable is the dated Intention Sheet v2, with the same real case run in v1 and v2 and the comparison table filled in. The facts take precedence; the method of reauditing each generation stays.</span></li>
+</ul>
+<div class="bg-dark-900/50 rounded-lg border border-amber-500/20 p-5 mb-7">
+<h3 class="font-semibold text-amber-400 mb-2">Next:</h3>
+<p class="text-sm text-neutral-300">You completed the immersion with the v2 Worksheet in hand. Mark your calendar: when the next model launches (from either company), reopen this day, redo Exercise 1, and update the date on the Worksheet. If the new generation needs even less, you’ll delete more lines — that’s how you know the Intention Architecture is working: with each model upgrade, your text gets shorter and your intention becomes clearer.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4">
+<a class="text-center px-6 py-3 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors" href="dia-3.html">← Day 3</a>
+<a class="text-center px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors" href="index.html">Complete the immersion ✓</a>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<footer class="border-t border-dark-600 py-8 mt-8">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+<p>Intent Architecture — an immersion <a class="text-sky-400 hover:text-sky-300" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a> · 2026</p>
+</div>
+</footer>
+<!-- SCRIPTS: nucleo v1 -->
+<script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+<!-- Camada de aprendizagem v2 -->
+<script src="../assets/learn.js"></script>
+<script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+    if (window.INEMA && INEMA.registerCheck) INEMA.registerCheck('modulo-1-4#q1', {
+      answer: 1,
+      explain: {
+        0: 'Errado — "nunca pergunte" força um chute onde falta uma decisão real. O guia recomenda definir o limiar, não proibir a pergunta.',
+        1: 'Correto — a parada indevida é um problema de autoridade mal escrita. Nomear o que ele decide sozinho, as três paradas e a suposição declarada resolve nos dois modelos, sem multiplicar regras.',
+        2: 'Errado — passo a passo é a muleta de 2025 voltando. A nova geração cuida do como; o que faltou foi intenção e fronteira, não roteiro.',
+        3: 'Errado — esforço regula quanto o modelo pensa, não se ele pergunta. Em esforço alto ele até tende a fazer mais do que foi pedido, o problema oposto.'
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="arquitetura-intencao" name="inema-course"/>
+<title>Day 1 — The Pyramid: why the prompt isn’t enough | Intent Architecture · INEMA.CLUB</title>
+<!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+<script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+<link href="../assets/learn.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+<script data-inema-manifest="" type="application/json">
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" },
+        { "id": "1-4", "title": "Dia 4 — A Virada", "topics": 6, "href": "dia-4.html" }
+      ]}
+    ]
+  }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+<link href="https://inematds.github.io/arquitetura-de-intencao/dia-1.html" hreflang="pt-BR" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/en/dia-1.html" hreflang="en" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/es/dia-1.html" hreflang="es" rel="alternate"/></head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen"><div class="inema-lang" style="position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:2px;padding:4px;border-radius:10px;background:rgba(12,12,16,.82);border:1px solid rgba(226,162,59,.45);font:600 12px/1 Sora,Inter,system-ui,sans-serif;backdrop-filter:blur(8px)" translate="no"><a href="../dia-1.html" hreflang="pt-BR" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">PT</a><a href="./dia-1.html" hreflang="en" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#1a1206;background:#E2A23B">EN</a><a href="../es/dia-1.html" hreflang="es" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">ES</a></div>
+<a class="skip" href="#conteudo">Skip to the content</a>
+<!-- NAVIGATION (identico em todas as paginas) -->
+<nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center h-14">
+<div class="flex items-center space-x-3">
+<a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300" href="index.html">
+<span class="text-2xl">🎯</span>
+<span class="font-bold text-lg hidden sm:inline">Intent Architecture</span>
+</a>
+<span class="text-neutral-600 hidden sm:inline">|</span>
+<a class="text-sky-400 hover:text-sky-300 text-sm font-medium" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a>
+</div>
+<div class="flex items-center space-x-1 sm:space-x-2">
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="index.html">Start</a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10" href="dia-1.html"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Day 1</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-2.html"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Day 2</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-3.html"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Day 3</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-4.html"><span class="sm:hidden">D4</span><span class="hidden sm:inline">Day 4</span></a>
+<button class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-journey-open="" title="My journey" type="button">
+<span aria-hidden="true">◷</span><span class="hidden sm:inline">Journey</span>
+<span aria-hidden="true" class="inema-journey-badge hidden" data-count="0" data-inema-journey-badge=""></span>
+</button>
+<button aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-appearance-toggle="[data-inema-appearance]" title="Appearance and reading" type="button">
+<span aria-hidden="true">◑</span><span class="hidden sm:inline">Appearance</span>
+</button>
+<button aria-label="Toggle light/dark" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" id="theme-toggle" title="Toggle light/dark">
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-dark-icon" viewbox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-light-icon" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+<div aria-label="Appearance and reading" class="inema-appearance-pop" data-inema-appearance="" role="dialog">
+<div class="inema-segment"><span class="inema-segment-label">Theme</span>
+<button data-inema-set-theme="inema-dark">Dark</button>
+<button data-inema-set-theme="claro">Clear</button>
+<button data-inema-set-theme="sepia">Sepia</button>
+<button data-inema-set-theme="foco">Focus</button>
+<button data-inema-set-theme="contraste">High contrast</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Source</span>
+<button data-inema-set-font="inter">Inter</button>
+<button data-inema-set-font="system">System</button>
+<button data-inema-set-font="leitura">Reading</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Size</span>
+<button data-inema-set-fontscale="100">A</button>
+<button data-inema-set-fontscale="112">A+</button>
+<button data-inema-set-fontscale="125">A++</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Width</span>
+<button data-inema-set-linewidth="60">Narrow</button>
+<button data-inema-set-linewidth="68">Medium</button>
+<button data-inema-set-linewidth="75">Long</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Between the lines</span>
+<button data-inema-set-leading="1.45">Compact</button>
+<button data-inema-set-leading="1.7">Comfortable</button>
+</div>
+<div aria-label="Accent color" class="inema-accent-grid">
+<button data-inema-set-accent="emerald" title="Emerald"></button>
+<button data-inema-set-accent="blue" title="Blue"></button>
+<button data-inema-set-accent="purple" title="Purple"></button>
+<button data-inema-set-accent="amber" title="Amber"></button>
+<button data-inema-set-accent="teal" title="Teal"></button>
+<button data-inema-set-accent="rose" title="Pink"></button>
+</div>
+</div>
+</nav>
+<main id="conteudo">
+<!-- BREADCRUMB -->
+<nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2"><div class="flex items-center gap-2 text-sm text-neutral-400"><a class="hover:text-amber-400" href="index.html">Start</a><span>/</span><span class="text-amber-400">Day 1</span></div></nav>
+<!-- HEADER -->
+<header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-4">DAY 1</span>
+<h1 class="text-3xl sm:text-4xl font-bold mb-3">🔺 The Pyramid: Why the Prompt Isn’t Enough</h1>
+<p class="text-lg text-neutral-400 max-w-3xl inema-prose">Learn to SEE which layer you’re operating at today and to DIAGNOSE why your AI results are unstable.</p>
+<!-- objetivos de aprendizagem -->
+<div class="mt-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Understand why a loose prompt depends on luck and why it has an inevitable ceiling</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Know the AI ladder — Coding, Vibe Coding, Agentic Engineering, Intent Architecture — and recognize each rung</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Notice how the human’s role changes at each step: from executor to director to architect</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Distinguish improvising from designing — and change the question from "how do I write a better prompt?" to "what system guides the AI?"</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Recognize the 4 breakdowns of shallow use to diagnose where your results break down</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Map your current position in the pyramid and choose 1 real intention to develop over the 4 days</span></div>
+</div>
+<!-- stats grid -->
+<div class="grid grid-cols-4 gap-4 mt-8 max-w-2xl">
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">6</div><div class="text-xs text-neutral-400">Topics</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">~90</div><div class="text-xs text-neutral-400">Minutes</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Essential</div><div class="text-xs text-neutral-400">Level</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Diagnosis</div><div class="text-xs text-neutral-400">Type</div></div>
+</div>
+</div>
+</header>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+<!-- ASIDE TOC -->
+<nav aria-label="Today’s index" class="hidden lg:block sticky top-24 self-start text-sm" data-inema-toc="">
+<p class="text-neutral-400 mb-2">Section <span data-inema-section-counter=""></span></p>
+<ol class="space-y-1">
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-1">1. The limits of asking better</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-2">2. The AI ladder</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-3">3. What changes at each level</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-4">4. Improvise × Design</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-5">5. The 4 failures of shallow use</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-6">6. Where are you?</a></li>
+</ol>
+</nav>
+<!-- COLUNA DE CONTEUDO -->
+<div>
+<!-- MEDIDOR DO MODULO -->
+<div aria-label="Day progress" aria-valuemax="100" aria-valuemin="0" class="mb-10" data-inema-meter="modulo:1-1" role="progressbar">
+<div class="flex justify-between text-sm mb-1.5">
+<span class="inema-meter-label" data-inema-meter-frac="">0 of 6</span>
+<span class="text-amber-400 font-semibold" data-inema-meter-pct="">0%</span>
+</div>
+<div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill=""></div></div>
+</div>
+<article data-inema-module="1-1" data-inema-track="1">
+<!-- ============ TOPICO 1 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-1" id="topico-1">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">1</span>
+<h2 class="text-2xl font-bold">🪜 "The Prompt Isn’t Enough": The Ceiling of Better Asking</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t1-p1">Imagine that every time you want coffee, you have to explain from scratch to the barista what coffee is, how you like it, which cup to use, and that it can’t be cold. It works—sometimes. But the result depends on the barista’s mood, how much you remembered to explain, and sheer luck. That’s exactly how a standalone prompt works: every request starts from scratch, with no memory, no rules, and no criteria for success. Before learning the theory, fix this mental model: a prompt is a one-off request; architecture is the system that makes the request reliable.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t1-p2"><strong class="text-amber-400">A prompt isn’t enough.</strong> This is the first signature line of this course, and you’ll hear it again. A prompt is a single instruction, written in the heat of the moment, that the AI interprets without any structure behind it. When it works, it feels like magic. When it fails, you don’t know why — so you try again, changing the words and hoping to get it right.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t1-p3">That’s the <strong class="text-amber-400">the limit of “asking better”</strong>: you’re optimizing for luck. Vague intent produces fragile results. If you ask, “write a good email to my customer,” the AI doesn’t know who the customer is, what your brand’s tone is, what’s already been discussed, or what you consider “good.” It improvises—and improvisation is inherently unreliable.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t1-p4"><strong class="text-amber-400">Poor context</strong> forces the AI to fill in gaps on its own. And it fills them with the internet average, not your reality. That’s why the same prompt delivers great results one time and mediocre ones the next: what changed was the interpretation, not your request.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t1-p5">The problem isn’t that prompts are bad. Prompts are great — for one-off, exploratory, disposable tasks. The problem is depending on them for something that needs to be <strong class="text-amber-400">reliable, repeatable, and aligned</strong>. Trial and error doesn’t scale. You can’t train a team, run a process, or trust a result that changes every time.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t1-p6">The shift begins when you stop asking “what magic words should I use?” and start asking “what information, rule, and criteria does the AI need to get it right every time?” That’s the difference between pressing a button and building a machine.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3 mt-6">A small business needs to follow up with a late-paying customer without damaging the relationship.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">“Write an email asking a late-paying customer to pay.”</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">“Write a payment reminder email. Context: a repeat customer for 2 years, an R$1.800 invoice that is 8 days overdue, and this is their first late payment. Our brand tone: friendly, direct, no threats. Goal: receive payment within 5 days while maintaining the relationship. Rule: never mention interest in this first message; offer a payment link and a channel for questions. Success = the customer replies or pays without feeling harassed.”</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The bad version leaves everything for the AI to guess: who the customer is, the tone, the limit, and what success looks like. The good version carries context (who/how much/how long), a rule (no interest right now), an objective (collect payment in 5 days), and a success criterion (preserve the relationship). The result no longer depends on luck.</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Load concrete context: who, what, for how long, what has already happened</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>State explicitly what "good" means — the success criterion</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>State at least one rule or limit (what NOT to do)</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Treat one-off prompts as drafts, not as a process</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Asking for something "good" or "professional" without defining what that means</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Assume that AI knows your customer, your brand, or your history</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Changing words in the dark and hoping to get it right through trial and error</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Trusting an unstable prompt for a task that needs to be repeated</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Before sending any important prompt, do the “what if I weren’t here?” test. If someone else read only your prompt, without knowing you, could they judge whether the result was correct? If not, context, an objective, or a criterion is missing — and the AI is in the same position as that person.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Prompt = one-off request</h4><p class="text-xs text-neutral-400">Each prompt starts from scratch. No memory of what came before, no fixed rules, no success criteria. The AI interprets on the fly — and interpretation varies.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Vague intention = fragile result</h4><p class="text-xs text-neutral-400">If you don't define what "good" means, the AI will define it for you — based on the internet average. Vague in, vague out. The result breaks at the first variation.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Poor context = improvisation</h4><p class="text-xs text-neutral-400">Without knowing who the client is, what the tone should be, and what has already happened, the AI fills the gaps by guessing. Improvisation is inherently unstable.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The ceiling of asking better</h4><p class="text-xs text-neutral-400">More effort in the prompt helps a little—until it stops. You’re optimizing luck, not the system. Trial and error doesn’t become a reliable process.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ============ TOPICO 2 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-2" id="topico-2">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">2</span>
+<h2 class="text-2xl font-bold">📊 The AI Ladder: 4 Levels</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t2-p1">Picture a staircase with four steps. On the bottom step, you do everything with your own hands. With each step up, you hand more execution over to the machine and take on more direction. At the top, you don’t operate anything—you design the system that lets the machine operate well on its own. This staircase isn’t about knowing how to code. It’s about how much you delegate and how much you structure. Keep the image in mind: the higher you go, the less you execute and the more you architect.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p2">The AI ladder has four rungs. Each describes a different way of working with artificial intelligence—and a different role for you.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p3"><strong class="text-amber-400">Step 1 — Coding.</strong> The human writes every line and controls all the logic. It's manual work: you decide every step, type every instruction, and take full responsibility for the result. A concrete example: an analyst building a spreadsheet one formula at a time, or a programmer writing code by hand, line by line. Total control, total effort.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p4"><strong class="text-amber-400">Step 2 — Vibe Coding.</strong> The human describes the intent in natural language, and the AI generates the first solution. You move from "how to do it" to "what I want." For example: "create a landing page with a name and email form" — and the AI delivers a working draft. You described the vibe; the machine made it real. It's fast, but it's still a one-off request: what you get depends on how well you described it.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p5"><strong class="text-amber-400">Step 3 — Agentic Engineering.</strong> The AI works in cycles: it writes, tests, finds errors, corrects them, and delivers. The human stops operating each step and starts DIRECTING. Example: you define the task—“create this report, validate the numbers against the database, and correct anything inconsistent”—and the agent runs the cycle on its own, going back when it makes a mistake. You don’t type every step; you set the objective and supervise the result.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p6"><strong class="text-amber-400">Step 4 — Intent Architecture.</strong> Here the focus shifts away from the agent and toward THE SYSTEM THAT GUIDES THE AGENT. You’re no longer assigning a task or directing a cycle: you’re building the context, rules, memory, objectives, and validation that make any agent deliver reliable, repeatable, aligned results — every time. Example: instead of asking for a customer service email, you define the customer service assistant’s system (what it knows, what it can and can’t do, what success looks like, how to validate it) — and it responds to hundreds of customers in the right way.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t2-p7">Notice the shift: at each level, the machine does more and you structure more. This isn't giving up control—it's trading execution control for direction control. And level 4 isn't 'advanced AI'; it's a way of thinking you can apply without writing a single line of code.</p>
+</div>
+<!-- SVG A (escada da IA) -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="The AI ladder has four rungs: Coding at the base, Vibe Coding, Agentic Engineering, and, at the top, Intention Architecture. The higher the rung, the more the human architect designs instead of executes." class="w-full h-auto" role="img" viewbox="0 0 1000 330">
+<defs>
+<lineargradient id="d1a-grad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbbf24"></stop><stop offset="1" stop-color="#f59e0b"></stop></lineargradient>
+<filter height="180%" id="d1a-glow" width="180%" x="-40%" y="-40%"><fegaussianblur result="b" stddeviation="1.8"></fegaussianblur><femerge><femergenode in="b"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge></filter>
+<pattern height="32" id="d1a-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.12" r="1.3"></circle></pattern>
+<marker id="d1a-ah" markerheight="10" markerwidth="10" orient="auto" refx="5" refy="8"><path d="M5,0 L9,9 L1,9 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d1a-grid)" height="330" width="1000" x="0" y="0"></rect>
+<line marker-end="url(#d1a-ah)" opacity="0.6" stroke="#fbbf24" stroke-width="2" x1="108" x2="108" y1="286" y2="46"></line>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" text-anchor="middle" transform="rotate(-90 90 170)" x="90" y="170">the human’s role increases</text>
+<rect fill="#1f1604" height="52" opacity="0.92" rx="11" stroke="#fbbf24" stroke-width="2" width="600" x="200" y="232"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="500" y="254">Coding</text>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11.5" text-anchor="middle" x="500" y="272">you write every line</text>
+<rect fill="#1f1604" height="52" opacity="0.94" rx="11" stroke="#fbbf24" stroke-width="2" width="496" x="252" y="168"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="500" y="190">Vibe Coding</text>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11.5" text-anchor="middle" x="500" y="208">you describe, the AI generates</text>
+<rect fill="#1f1604" height="52" rx="11" stroke="#fbbf24" stroke-width="2" width="392" x="304" y="104"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="500" y="126">Agentic Engineering</text>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11.5" text-anchor="middle" x="500" y="144">AI executes; you direct</text>
+<g filter="url(#d1a-glow)"><rect fill="url(#d1a-grad)" height="56" rx="12" stroke="#f59e0b" stroke-width="2.5" width="288" x="356" y="40"></rect></g>
+<text fill="#231400" font-family="Inter,sans-serif" font-size="15.5" font-weight="700" text-anchor="middle" x="500" y="62">Intent Architecture</text>
+<text fill="#3a2400" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" text-anchor="middle" x="500" y="80">you architect the system</text>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">The AI ladder—each rung elevates the role of the person guiding it.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3 mt-6">Task: answer customer questions about delivery times.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">Steps 1/2: you write every reply yourself (Coding) or ask the AI “reply to this customer about the timeline” from scratch every time (Vibe Coding). It works in specific cases, but it doesn’t scale and varies with each reply.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">Steps 3/4: you direct an agent that checks the timeline database, drafts the reply, and validates it before sending (Agentic Engineering) — and, at the next level, define the assistant’s system: what it knows about your products, the brand voice, what it CANNOT promise, and how to check whether the reply is correct (Intent Architecture). Now a hundred customers get the right standard.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The task is the same; what changes is who carries the structure. On the lower rungs, the structure is in your head and gets lost with every request. On the higher rungs, the structure becomes a system—and the result stays reliable, repeatable, and aligned without depending on you to repeat everything.</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Identify which step you’re at today for each of your tasks</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Understand that moving up a level means delegating execution, not losing control</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Recognize that level 4 is a way of thinking, not a technical prerequisite</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Look for repetitive tasks — they’re the best candidates for moving up the ladder</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Think that a “higher rung” is always better — a one-off task fits well on rung 2</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confusing Intent Architecture with “knowing how to code”</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Jump straight to automation without first structuring context and rules</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Treat the ladder as a hierarchy of personal value instead of modes of work</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">You’re not on just one rung — you’re on different rungs for different tasks. You might direct agents in marketing (rung 3) and still write every sales email by hand (rung 1). Self-diagnosis is by task, not by person. Map your tasks, not yourself.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Step 1 — Coding</h4><p class="text-xs text-neutral-400">The human writes every line and controls all the logic. Maximum control, maximum effort. Example: building a spreadsheet one formula at a time.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Step 2 — Vibe Coding</h4><p class="text-xs text-neutral-400">The human describes the intent in natural language; the AI generates the 1st solution. You move from "how" to "what." It's still a one-off request.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Step 3 — Agentic Engineering</h4><p class="text-xs text-neutral-400">The AI works in cycles (write, test, correct, deliver). The human stops operating individual steps and starts DIRECTING the process.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Step 4 — Intent Architecture</h4><p class="text-xs text-neutral-400">The focus shifts from the agent to the SYSTEM that guides the agent: context, rules, memory, objectives, and validation. A reliable, repeatable result.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ============ TOPICO 3 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-3" id="topico-3">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">3</span>
+<h2 class="text-2xl font-bold">🧗 What Changes at Each Level</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t3-p1">At each rung of the ladder, something goes up and something goes down. What goes down is how much you do hands-on. What goes up is the level of your involvement: you go from handling the pieces to designing the factory. Before the theory, picture the promotion: you start as a worker, become a manager, then a director, and finally an architect. The work doesn’t disappear — it moves up a level.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p2">At each step up, the human’s role rises to a higher level. It’s not that you work less—it’s that you work at a higher level of <strong class="text-amber-400">abstraction and impact</strong>.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p3">At level 1 (Coding), you <strong class="text-amber-400">WRITE</strong> every line. Your attention is on the details of execution: the right formula, the right comma, the right step. If something goes wrong, it’s because you made a mistake. The result is only as good as your hands.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p4">At level 2 (Vibe Coding), you <strong class="text-amber-400">DESCRIBES</strong> the intent. You move away from the details and focus on the request: "I want this, more or less like this." AI handles the first execution. Your focus shifts from "how do I type this" to "how do I describe what I want." Quality now depends on the clarity of your request, not your typing.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p5">At level 3 (Agentic Engineering), you <strong class="text-amber-400">DIRECTS</strong> the process. It doesn't describe a single request—it defines an objective and lets the agent run the cycle of trying, testing, and correcting. Your attention shifts back to “what's the mission, what are the limits, and how do I know it went well?” You become the director: you set the scene; you don't act in it.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p6">At level 4 (Intent Architecture), you <strong class="text-amber-400">ARCHITECT</strong> the system that guides the agent. You don't direct a specific run—you design the conditions so every run goes right: the context the AI carries, the rules that constrain it, the memory it builds, the objectives that guide it, and the validation that confirms it's correct. You become the architect: you don't build the house; you design the blueprint that ensures every house meets the standard.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t3-p7">The progression is clear: <strong class="text-amber-400">execute → describe → direct → architect</strong>. Each step frees you from an operational burden and gives you a thinking burden. Climbing the ladder doesn’t make you lazy—it makes you a strategist. That’s why the skill of the future isn’t “using AI”: it’s architecting the intent that gets AI to deliver.</p>
+</div>
+<!-- TIMELINE: a progressão dos verbos -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4 mt-6">Moving up in four verbs</h3>
+<div class="space-y-0 mb-8">
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">1</span>
+<span class="w-px flex-1 bg-dark-600 my-1"></span>
+</div>
+<div class="pb-6"><h4 class="font-semibold text-neutral-100 mb-1">Execute</h4><p class="text-sm text-neutral-400">You write every line. You focus on the details of execution. The result is only as good as your own work — and every step’s mistakes are yours, too.</p></div>
+</div>
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">2</span>
+<span class="w-px flex-1 bg-dark-600 my-1"></span>
+</div>
+<div class="pb-6"><h4 class="font-semibold text-neutral-100 mb-1">Describe</h4><p class="text-sm text-neutral-400">You describe the intention in natural language. Quality now depends on how clear the request is, not on typing. AI does the first run.</p></div>
+</div>
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">3</span>
+<span class="w-px flex-1 bg-dark-600 my-1"></span>
+</div>
+<div class="pb-6"><h4 class="font-semibold text-neutral-100 mb-1">Direct</h4><p class="text-sm text-neutral-400">You define the objective and limits; the agent runs the try-test-correct cycle. You become the director: you set the scene, you don’t act in it.</p></div>
+</div>
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">4</span>
+</div>
+<div><h4 class="font-semibold text-amber-400 mb-1">Architect</h4><p class="text-sm text-neutral-400">You design the system (context, rules, memory, objectives, validation) that makes every run come out right. You draw the blueprint, not the house.</p></div>
+</div>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">A creator needs to publish weekly posts in the brand’s voice.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">Steps 1–2 (execute/describe): you write every post from scratch, or ask “write a post about X” every week. The tone varies, you review everything by hand, and nothing you’ve learned about what works is recorded for next time.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">Steps 3–4 (direct/design): you define the editorial system — who the audience is, the brand voice (with examples of what feels “like us” and what doesn’t), allowed topics, what to avoid, and how to validate a post before publishing. The agent generates it, you direct the adjustments, and the system remembers the patterns that worked. The tone stays consistent week after week.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> At the lower level, brand knowledge lives in your head and gets used up with every post. At the higher level, that knowledge becomes a system — persistent memory and rules. You've moved from "the person who writes" to "the person who designs how everything gets written." The result is repeatable without depending on you to redo the brief every time.</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Notice which verb describes how you spend your day: executing, describing, directing, or architecting</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Consciously aim to move up the verb ladder for tasks that repeat</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Turn what’s “in your head” into explicit context, rules, and memory</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Accept that moving up a rung trades operational workload for thinking workload</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Getting stuck "executing" tasks that could be directed or architected</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Direct agents without first defining clear objectives and limits</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Think that architecting is less work — it’s a different kind of work</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep critical knowledge only in your memory, without recording it in the system</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Look at a task you redo every week and identify the verb. If you’re still “executing” or “describing” it from scratch every time, it’s the top candidate for moving up a level. The question is: what do I need to record from my own thinking as context, rules, and memory so I never have to explain this again?</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Execute (step 1)</h4><p class="text-xs text-neutral-400">You write every line. You focus on the details of execution. The result is only as good as your own work — and every step’s mistakes are yours, too.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Describe (step 2)</h4><p class="text-xs text-neutral-400">You describe the intention in natural language. Quality now depends on how clear the request is, not on typing. AI does the first run.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Direct (rung 3)</h4><p class="text-xs text-neutral-400">You define the objective and limits; the agent runs the try-test-correct cycle. You become the director: you set the scene, you don’t act in it.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Architect (step 4)</h4><p class="text-xs text-neutral-400">You design the system (context, rules, memory, objectives, validation) that makes every run come out right. You draw the blueprint, not the house.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ============ TOPICO 4 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-4" id="topico-4">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">4</span>
+<h2 class="text-2xl font-bold">🔑 Improvising × Designing: The Turning Point</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t4-p1">There’s a huge difference between a musician improvising in a bar and an architect designing a building. Improvisation is quick, creative, and depends on the talent of the moment — but you don’t live in an improvisation. A design is structured, repeatable, and reliable — you trust it with your life. It’s the same with AI. Improvising prompts is playing in the bar. Architecting intent is designing the building. Before the theory, remember: the difference between using AI superficially and building a system is the same as the difference between improvising and designing.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p2">This is the <strong class="text-amber-400">turning point</strong> of the entire course. The difference between using AI superficially and building a system is the same as the difference between improvising and designing.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p3"><strong class="text-amber-400">Improvise</strong> is the one-off prompt mindset. You react to the moment, try something, see what comes out, and adjust in the dark. It’s flexible and fast—but unstable. Each result is a one-time event you can’t guarantee will happen again. Improvisation shines during exploration and fails in operation.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p4"><strong class="text-amber-400">Design</strong> is the architecture mindset. You anticipate what the AI needs to know, what success looks like, what the limits are, and how to validate—all before you ask for anything. It takes more work upfront, but the result becomes reliable, repeatable, and aligned. You don’t hope it works; you build it to work.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p5">The shift happens in the question you ask. Someone improvising asks: “How do I make a better prompt?” It’s an execution question—always looking for the next magic word. Someone designing asks: “What system will guide the AI toward the result I need?” It’s an architecture question—focused on the conditions, not luck.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p6">Notice: the improvisation question keeps you spinning in trial and error forever. The design question gets you out of that cycle. Instead of endlessly improving one isolated request, you build the structure once so every request comes out right.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t4-p7">This doesn’t mean improvising is wrong. Improvising is great for discovering, testing, and prototyping. The mistake is improvising when you needed to design—trusting luck with a task that needed guarantees. Maturity means knowing when to do each. And this course is about adopting a design mindset: stop hunting for the perfect prompt and start designing the right system.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3 mt-6">An HR manager wants to use AI to pre-screen candidates for a job opening.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">Improvise: “Analyze this résumé and tell me if it’s a good fit for the job.” For every résumé, the AI uses a different standard; you don’t know why it accepted or rejected someone, and two similar candidates get opposite judgments. You’re hoping for the best, not screening.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">Design: you define the screening system—the job’s objective criteria (required, preferred, and disqualifying requirements), the rule against considering data that could introduce bias, the response format (score by criterion + rationale), and the validation (manually review every borderline case). Now every résumé goes through the same process, with the reason recorded.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> Improvisation produces a judgment that changes with every run and can't be explained — dangerous and unfair in a sensitive process like HR. The project defines criteria, rules, format, and validation upfront — so the result becomes consistent, auditable, and defensible. The question is no longer "is this résumé good?" but "what system decides what good means?"</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ask "what system guides the AI?" before "what prompt should I use?"</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Using improvisation to explore and prototype; a project to operate and repeat</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Invest effort upfront (structure) to gain reliability later</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Record why a result is correct—not just that it was produced</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Improvise on tasks that need guaranteed, auditable results</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Hunt endlessly for the "magic word" instead of structuring the system</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confusing the speed of improvisation with real productivity</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Think that designing removes creativity — design is where creativity scales</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">When you catch yourself rewriting the same prompt for the fifth time, stop. That’s a sign you’re improvising something that called for a design. Change the question right away: instead of “how can I improve this request?”, ask “what context, rule, and criterion should I have defined so I never have to rewrite this again?”</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Improvise = react to the moment</h4><p class="text-xs text-neutral-400">Try it, see what comes out, adjust in the dark. Fast and flexible, but unstable. Each result is a one-off event you can't guarantee you'll repeat.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Design = anticipate the conditions</h4><p class="text-xs text-neutral-400">Define context, success, limits, and validation before you ask. More work up front means a reliable, repeatable, aligned result later.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The shallow question</h4><p class="text-xs text-neutral-400">“How do I write a better prompt?” — an execution question that traps you in trial and error, always hunting for the next magic word.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The architecture question</h4><p class="text-xs text-neutral-400">“What system guides the AI?” — a design question that gets you out of the loop: build the structure once that makes everything come out right.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ============ TOPICO 5 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-5" id="topico-5">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">5</span>
+<h2 class="text-2xl font-bold">⚠️ The 4 pitfalls of shallow use</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t5-p1">When an AI result goes wrong, it’s rarely because “AI is stupid.” It’s because a structural piece was missing—and each missing piece causes a specific kind of failure. There are four classic failures, the four breakdowns of shallow use. Learning to recognize them is like learning to read symptoms: you can diagnose exactly what was missing instead of guessing. Remember the chain we’ll use throughout the course—Intention → Context → Process → Result—because each breakdown is a missing piece in that chain.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p2">Shallow AI use collapses in four predictable ways. Each failure is a missing piece of the architecture. Learn to recognize them, and you’ll be able to diagnose any bad result.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p3"><strong class="text-amber-400">Collapse 1 — Intent without structure = noise.</strong> You know what you want, but you hand it to AI without organizing it. The request comes out unclear, AI responds in the dark, and the result is noise: lots of text, little value. Example: "help me with my business" — AI returns generalities because the intent arrived without shape. Symptom: generic, off-target answers that work for anyone and no one.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p4"><strong class="text-amber-400">Collapse 2 — Context without an objective = excess.</strong> You dump information — documents, history, data — but don’t say what success looks like. AI drowns in the context and doesn’t know what to prioritize. Example: you paste 20 pages of a report and ask, “What do you think?” AI summarizes everything and decides nothing, because context without an objective becomes information overload. Symptom: long, unfocused answers that touch on everything without reaching a conclusion.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p5"><strong class="text-amber-400">Collapse 3 — Automation without rules = risk.</strong> You automate a task but don’t define limits. AI acts quickly and at scale — including making mistakes quickly and at scale. Example: a customer support assistant that, without a rule, promises refunds the company doesn’t offer to a thousand customers. Automation without rules becomes a risk. Symptom: errors silently multiply because no one put a safeguard in place.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p6"><strong class="text-amber-400">Collapse 4 — AI without validation = the illusion of productivity.</strong> The AI delivers something that looks finished, you trust it, and move on. But no one checked whether it’s correct. You feel like you’ve accomplished a lot—until the error shows up later, at a high cost. Example: a report with fabricated numbers that you only discover in a meeting with the customer. AI without validation creates the illusion of productivity. Symptom: a sense of efficiency today, rework and losses tomorrow.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t5-p7">The chain <strong class="text-amber-400">Intention → Context → Process → Result</strong> organizes everything: the intent needs structure, the context needs an objective, the process (automation) needs a rule, and the result needs validation. Remove one piece and you know exactly what will collapse. This is your diagnostic kit for the 4 days.</p>
+</div>
+<!-- SVG B (os 4 colapsos) -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="The four failure modes of shallow AI use: intention without structure becomes noise; context without a goal becomes overload; automation without rules becomes risk; AI without validation becomes an illusion of productivity." class="w-full h-auto" role="img" viewbox="0 0 1000 300">
+<defs>
+<pattern height="32" id="d1b-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d1b-ah" markerheight="9" markerwidth="9" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#f87171"></path></marker>
+</defs>
+<rect fill="url(#d1b-grid)" height="300" width="1000" x="0" y="0"></rect>
+<!-- card 1 -->
+<rect fill="#1f1604" height="56" rx="10" stroke="#fbbf24" stroke-width="2" width="212" x="50" y="58"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" text-anchor="middle" x="156" y="91">unstructured intent</text>
+<line marker-end="url(#d1b-ah)" stroke="#f87171" stroke-width="2" x1="267" x2="300" y1="86" y2="86"></line>
+<rect fill="#2a0f10" height="56" rx="10" stroke="#f87171" stroke-width="2" width="150" x="305" y="58"></rect>
+<text fill="#fca5a5" font-family="Inter,sans-serif" font-size="15" font-weight="700" text-anchor="middle" x="380" y="91">noise</text>
+<!-- card 2 -->
+<rect fill="#1f1604" height="56" rx="10" stroke="#fbbf24" stroke-width="2" width="212" x="530" y="58"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" text-anchor="middle" x="636" y="91">context without an objective</text>
+<line marker-end="url(#d1b-ah)" stroke="#f87171" stroke-width="2" x1="747" x2="780" y1="86" y2="86"></line>
+<rect fill="#2a0f10" height="56" rx="10" stroke="#f87171" stroke-width="2" width="150" x="785" y="58"></rect>
+<text fill="#fca5a5" font-family="Inter,sans-serif" font-size="15" font-weight="700" text-anchor="middle" x="860" y="91">excess</text>
+<!-- card 3 -->
+<rect fill="#1f1604" height="56" rx="10" stroke="#fbbf24" stroke-width="2" width="212" x="50" y="190"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" text-anchor="middle" x="156" y="223">automation without rules</text>
+<line marker-end="url(#d1b-ah)" stroke="#f87171" stroke-width="2" x1="267" x2="300" y1="218" y2="218"></line>
+<rect fill="#2a0f10" height="56" rx="10" stroke="#f87171" stroke-width="2" width="150" x="305" y="190"></rect>
+<text fill="#fca5a5" font-family="Inter,sans-serif" font-size="15" font-weight="700" text-anchor="middle" x="380" y="223">risk</text>
+<!-- card 4 -->
+<rect fill="#1f1604" height="56" rx="10" stroke="#fbbf24" stroke-width="2" width="212" x="530" y="190"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="12.5" font-weight="600" text-anchor="middle" x="636" y="223">AI without validation</text>
+<line marker-end="url(#d1b-ah)" stroke="#f87171" stroke-width="2" x1="747" x2="780" y1="218" y2="218"></line>
+<rect fill="#2a0f10" height="56" rx="10" stroke="#f87171" stroke-width="2" width="150" x="785" y="190"></rect>
+<text fill="#fca5a5" font-family="Inter,sans-serif" font-size="13.5" font-weight="700" text-anchor="middle" x="860" y="223">illusion</text>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Without structure, each part of shallow usage collapses in a different way.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3 mt-6">An AI assistant handling customer service for a small business started generating complaints.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">Shallow diagnosis: "AI is bad, I’ll switch tools." You switch, spend time, and the problem comes back — because the tool wasn’t the cause.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">Structural diagnosis: run the case through the 4 collapses. Were the answers generic? (intent without structure). Were they scattered because of too much unfocused data? (context without an objective). Did the assistant promise something prohibited? (automation without rules). Did no one check the answers before sending them? (AI without validation). You discover that the problem was collapse 3: the rule "never promise a deadline under 48h" was missing. You add the rule, and the symptom disappears.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> A shallow diagnosis blames the tool and solves nothing. A structural diagnosis uses the 4 breakdowns as a checklist and pinpoints the missing piece. You move from "AI is bad" to "rule X was missing" — a problem you can fix. Diagnosing the missing piece is what separates people who complain from people who fix things.</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>When faced with a bad result, run through the 4 collapses as a diagnostic checklist</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ask which piece was missing: structure, objective, rule, or validation</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Match each symptom to its structural cause before changing the tool</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Using the Intention → Context → Process → Result chain to locate the failure</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Blaming “the AI” in general instead of finding the missing piece</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Add more context when the problem was a lack of an objective</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Automate at scale before defining the rules</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Trusting a result that looks ready without any validation</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Memorize the 4 failure modes as four diagnostic questions: 1) Was the intent structured? 2) Did the context have a goal? 3) Did the automation have a rule? 4) Was the result validated? Any poor AI result fails at least one of these. Find the missing piece, and you’ve found the fix.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Intention without structure = noise</h4><p class="text-xs text-neutral-400">You know what you want but don’t organize it. AI responds in the dark and gives you generalities. Symptom: answers that could apply to anyone.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Context without an objective = excess</h4><p class="text-xs text-neutral-400">You dump information without saying what success looks like. AI drowns in it and doesn’t prioritize. Symptom: long answers that touch on everything and conclude nothing.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Automation without rules = risk</h4><p class="text-xs text-neutral-400">You automate without limits. AI makes mistakes quickly and at scale. Symptom: errors silently multiply because there was no safeguard.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">AI without validation = the illusion of productivity</h4><p class="text-xs text-neutral-400">You trust what looks finished without checking. Symptom: a sense of efficiency today, rework and costly losses tomorrow.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ============ TOPICO 6 ============ -->
+<section class="mb-16" data-inema-topic="modulo-1-1#topico-6" id="topico-6">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">6</span>
+<h2 class="text-2xl font-bold">🎯 Where are you? Self-assessment</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-1-t6-p1">Every transformation starts with an honest map of where you are. You can't choose the path without knowing your starting point. Today you'll make two moves: locate, task by task, which rung of the ladder you operate on—and choose ONE real intent from your world to develop over the 4 days. This intent will be your lab case: on Day 2 you'll architect it with the 5 pillars, and on Day 3 you'll turn it into a system that can be validated. Choose something that truly matters.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p2">This is the <strong class="text-amber-400">topic-deliverable</strong> of the day. Here, theory becomes a personal diagnosis and a concrete starting point.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p3"><strong class="text-amber-400">First step: task-based self-assessment.</strong> List 3 to 5 tasks you do with AI today—or would like to do. For each one, identify the level: Do you perform each step yourself (1, Coding)? Describe it and have AI generate the first version (2, Vibe Coding)? Direct an agent that runs cycles (3, Agentic Engineering)? Or architect the system that guides the agent (4, Intent Architecture)? Be honest. Most people are at levels 1 and 2 for most tasks—and that’s fine; this is the real starting point.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p4"><strong class="text-amber-400">Second move: detect the collapses.</strong> For tasks where the result is unstable, check the 4 failure modes. Which piece is missing? That already tells you what to design first.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p5"><strong class="text-amber-400">Third move: choose 1 real intent.</strong> Of all your tasks, choose ONE to be your 4-day lab case. A good intention has three marks: it’s real (it happens in your work or life), repeatable (you do it more than once, so it’s worth structuring), and important (the result has consequences). Avoid choosing something trivial “to make it easier” — the more real it is, the more you learn.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p6">Examples of good intentions: a customer service assistant for your business; a system that standardizes your branded posts; a workflow that pre-screens résumés; a process that turns meetings into reliable minutes; an agent that answers basic legal questions within safe limits.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-1-t6-p7">Today's deliverable is the <strong class="text-amber-400">Pyramid Position Map</strong> filled in: your tasks, your steps, the collapses you identified, and — highlighted — the 1 real intention you’ll carry into day 2. This map is the foundation for everything that follows. Without a clear starting point, there’s no project. With one, you’ve already moved beyond the surface.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3 mt-6">Student who owns an online store decides which case to bring as a lab case.</p>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300">“I’m going to ask AI to write a poem about my store.” It’s one-off, doesn’t repeat, and has no real consequences. As a lab exercise, it teaches little — there’s nothing to architect, validate, or repeat.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300">“I’m going to build an AI assistant that answers my customers’ frequently asked questions (delivery time, returns, shipping) in my store’s tone, without promising what I can’t deliver.” It’s real (happens every day), repeatable (hundreds of customers), and important (affects sales and reputation).</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The bad version is a one-time exercise with no structure to build on. The good version is a living system: it has context (products, policies), objectives (answer the question and make a sale), rules (don’t overpromise), memory (recurring questions), and validation (correct answer before sending). It’s exactly the kind of intent that takes shape over the 4 days.</p>
+<!-- fazer / evitar -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>List 3–5 real tasks you do or want to do with AI</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Honestly classify each one on the scale from 1 to 4</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Run the 4 collapses on unstable tasks to find the missing piece</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Choose 1 real, repeatable, important intent as your case for the 4 days</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Choose a trivial intent “to make it easier” — you’ll learn less</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>If you classify something at a high level out of vanity instead of honesty</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Choose something one-off that doesn’t repeat (there’s nothing to architect)</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Leave day 1 without a completed Map and a defined intention</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">To test whether your intention is a good one, ask three questions: Does it happen again? Does anyone care about the result? Could I explain it to someone else so they could do it? If you answered yes to all three, you have a great lab case. If you answered no to any of them, choose another—the quality of your learning over the next 2 days depends on this choice.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Diagnosis is task-specific</h4><p class="text-xs text-neutral-400">You’re not on a single rung. List 3-5 tasks and classify each one. The real picture emerges task by task, not person by person.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Honesty is a prerequisite</h4><p class="text-xs text-neutral-400">Most people are on rungs 1–2 for most tasks. Admitting that isn’t weakness—it’s the starting point that makes moving up possible.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The 3 marks of good intent</h4><p class="text-xs text-neutral-400">Real (happens in your world), repeatable (you do it more than once), and important (has consequences). The more real it is, the more you learn.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Intention is your 4-day lab</h4><p class="text-xs text-neutral-400">On day 2, you architect it with the 5 pillars; on day 3, it becomes a system you can validate. Choose something today that's truly worth building.</p></div>
+</div>
+<!-- marcar como lido -->
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+</article>
+<!-- ============ E1) EXERCICIOS PRATICOS ============ -->
+<section class="mb-14">
+<h2 class="text-2xl font-bold mb-2">🛠️ Practical Exercises</h2>
+<p class="text-neutral-400 mb-6 inema-prose">Use your real case. The answer key is an example, not the only correct answer.</p>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">1. Rewrite the fragile prompt</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Experience firsthand the difference between a vague intention and a structured one.</p>
+<p class="text-neutral-300 text-sm mb-4">Take a vague, "shallow" prompt you might use day to day (e.g., "write a post for my company"). Rewrite it by adding four things: (1) concrete context, (2) an objective/success criterion, (3) at least one rule or limit, and (4) what a "correct" result would look like. Compare the two in your mind: which one depends less on luck?</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Write the original shallow prompt, exactly as you’d send it on impulse</li>
+<li>Add context: who, what, for whom, and in what situation</li>
+<li>Add an objective: what success looks like and why</li>
+<li>Add 1 rule/limit: what the AI must NOT do</li>
+<li>Add the “correct” criterion: how you’ll know it turned out well</li>
+<li>Reread and mark what changed from unstable to reliable</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">SHALLOW PROMPT: “Write a post to promote my English course.”
+
+STRUCTURED PROMPT: “Write an Instagram post to promote my English course. CONTEXT: online course for adults ages 30-45 who studied English in school but got stuck; my brand is encouraging and doesn’t offer ‘magic formulas.’ GOAL: get sign-ups for a free class on Thursday; success = comment ‘I’m in’ or click the link. RULE: don’t promise quick fluency or use clichés like ‘English in 30 days’; maximum 4 lines + 1 call to action. RIGHT = sounds like a conversation with someone who understands the frustration of getting stuck, not an aggressive ad.”
+
+DIFFERENCE: the shallow prompt leaves the tone, audience, promise, and format for the AI to guess—and it will use the average internet cliché. The structured prompt includes context, a goal, a rule, and a criterion, so the result no longer depends on luck and instead depends on structure.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: If you get stuck on any of the four, that’s exactly the element your original prompt was missing—and the reason the result varied.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">2. Classify 5 tasks on the ladder</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Train yourself to recognize which rung you’re operating on, task by task.</p>
+<p class="text-neutral-300 text-sm mb-4">List 5 tasks you do (or want to do) with AI. For each one, mark its current level (1 Coding, 2 Vibe Coding, 3 Agentic Engineering, 4 Intent Architecture) and the level it could reach. Justify each classification in one sentence.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>List 5 real tasks from your day-to-day work with AI</li>
+<li>For each one, identify the verb: do I execute, describe, direct, or design?</li>
+<li>Mark the current level (1 to 4)</li>
+<li>Ask: does this task repeat? If so, could it move up a step?</li>
+<li>Mark the target level and write why it could move up</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">1) Answer customer questions → CURRENT: 2 (I describe each answer) → TARGET: 4 (design an assistant with context, rules, and validation)—because it repeats hundreds of times and the tone needs to stay consistent.
+2) Write a business proposal → CURRENT: 2 → TARGET: 3 (direct an agent that builds the proposal from a template and validates the numbers).
+3) Summarize meetings into minutes → CURRENT: 1 (I do it by hand) → TARGET: 4 (a system with a fixed format, rules about what to include, and validation).
+4) Create an image for a post → CURRENT: 2 → TARGET: 2 (it’s one-off and creative; it works well at step 2 and doesn’t need to move up).
+5) Pre-screen resumes → CURRENT: 1 → TARGET: 4 (fixed criteria, an anti-bias rule, an output format, and human validation for edge cases).
+
+READING THE MAP: repetitive tasks with consequences (1, 2, 3, 5) call for moving up; the creative, one-off task (4) can stay where it is.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: Not every task should be escalated. The key question is: does it repeat, and does the result matter? If so, escalation pays off. If it’s one-off and creative, level 2 is enough.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">3. Diagnose the collapse</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Apply the 4 collapses as a diagnostic tool in real cases.</p>
+<p class="text-neutral-300 text-sm mb-4">For each of the three scenarios below, identify WHICH of the 4 failure modes is happening (intention without structure / context without a goal / automation without rules / AI without validation) and suggest the missing piece. Scenario A: you pasted 15 pages of a contract and asked, “What do you think?”—the AI returned a huge summary without pointing out anything useful. Scenario B: your customer service bot replied to 200 customers offering a discount that doesn’t exist. Scenario C: you gave your boss an AI-generated report and discovered in the meeting that two numbers were wrong.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Read each scenario and identify the symptom</li>
+<li>Match the symptom to the 4 failure modes</li>
+<li>Name the breakdown in each scenario</li>
+<li>Suggest the missing structural component to fix it</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">SCENARIO A → Collapse 2: context without an objective = overload. You gave it lots of material and no objective, so the AI summarized everything and decided nothing. MISSING PIECE: a clear objective — e.g., “list the 3 highest-risk clauses for the client and explain why each one is risky.”
+
+SCENARIO B → Collapse 3: automation without rules = risk. The bot acted at scale without limits, and the error multiplied 200-fold. MISSING PIECE: explicit rules — e.g., “never offer discounts; discounts require human approval” + a list of what it can and can’t promise.
+
+SCENARIO C → Collapse 4: AI without validation = the illusion of productivity. It looked done, you trusted it, and no one checked. MISSING PIECE: a validation step — e.g., check every number against the source before delivering, or flag unverified data.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: The symptom reveals the failure. “Lots of text, nothing useful” = excess (context without an objective). “Error multiplied at scale” = risk (automation without a rule). “It looked right, but was wrong” = illusion (no validation).</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">4. Fill in your Position Map on the Pyramid</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Produce the day’s deliverable: position diagnosis + choice of a real intention.</p>
+<p class="text-neutral-300 text-sm mb-4">Fill in the Pyramid Position Map template with YOUR real tasks. At the end, choose and highlight 1 real intention you’ll develop over the 4 days. Test the intention against the 3 markers: real, repeatable, matters.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>List your 3–5 tasks using the template</li>
+<li>Classify each one at its current level and mark the collapses you notice</li>
+<li>Define the target level for each task</li>
+<li>Choose the 1 real intent among them</li>
+<li>Apply the 3 marks test (real? repeatable? matters?)</li>
+<li>Write the intent in one clear sentence, as you would take it into day 2</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">TASKS:
+- Customer service → current rung 2 → perceived collapse: automation without rules (I already tried a bot and it overpromised) → target 4.
+- Brand posts → current 2 → collapse: intent without structure (tone varies) → target 3/4.
+- Meeting minutes → current 1 → collapse: AI without validation → target 4.
+
+CHOSEN INTENT: "Build an AI assistant that answers my customers' frequently asked questions (lead time, exchanges, shipping) in my store's tone, without promising anything I can't deliver."
+
+3-MARK TEST: Real? Yes, it happens every day. Repeatable? Yes, hundreds of customers/month. Does it matter? Yes, it affects sales and reputation. → Intent approved for the 4 days.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: If your intention meets all 3 criteria, it’s strong. If it fails any—especially “repeatable”—choose another one, or you won’t have anything to architect on day 2.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">5. Improvise × Design: classify and justify</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objective:</strong> Internalize when to improvise and when design is essential.</p>
+<p class="text-neutral-300 text-sm mb-4">For each situation, decide whether the right approach is IMPROVISE (one-off prompt) or DESIGN (system) and justify your answer in one sentence. 1) Quick brainstorm of names for a new product. 2) Automatic support replies sent without human review. 3) Testing a script idea at 11 p.m. out of curiosity. 4) Generating reports that go to the patient. 5) Drafting the outline of an article you’ll rewrite later.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Read each situation</li>
+<li>Ask: does the result repeat? Are there consequences? Does it need to be guaranteed?</li>
+<li>Choose whether to improvise or design</li>
+<li>Justify based on repeatability and consequences</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">1) IMPROVISE — brainstorming is one-off exploration with no consequences; improvising is the right tool.
+2) DESIGN — it runs at scale without human review; without rules and validation, it becomes a risk. It requires a system.
+3) IMPROVISE — a curiosity test, disposable, with no consequences.
+4) DESIGN — high risk with direct consequences for people; it requires context, rules, and rigorous validation. Never improvise.
+5) IMPROVISE — it’s a draft you’ll rewrite; you’ll add structure later, yourself.
+
+RULE OF THUMB: repeated + consequential = design. One-off + disposable = improvise. The danger lies in improvising when design was needed (cases 2 and 4).</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Tip: The costly mistake is never overdesigning—it’s improvising where consequences and scale are involved. When in doubt, look at the consequence of an error: the worse it is, the more you need to design for it.</p>
+</div>
+</section>
+<!-- ============ E2) TEMPLATE / CANVAS DO DIA ============ -->
+<section class="mb-14">
+<div class="bg-gradient-to-br from-amber-900/20 to-dark-800 rounded-xl border border-amber-500/30 p-6 sm:p-8">
+<h2 class="text-2xl font-bold mb-2 flex items-center"><span class="mr-2">🧩</span>Pyramid Position Map</h2>
+<p class="text-neutral-300 mb-6 inema-prose">Day 1 personal diagnosis: map which rung of the ladder you operate on for each task you do with AI, identify the collapses that explain your unstable results, and choose the 1 real intention you’ll develop over the 4 days. This map is the foundation for everything on day 2 (designing with the 5 pillars) and day 3 (turning it into a system you can validate).</p>
+<div class="space-y-3">
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Task I do with AI</div><div class="text-neutral-300 text-sm">Example: Answer my customers’ frequently asked questions (timeline, exchanges, shipping)</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Current step (1 Coding / 2 Vibe Coding / 3 Agentic Eng. / 4 Architecture)</div><div class="text-neutral-300 text-sm">Example: Step 2 — I describe each response from scratch, the AI generates it, and I review it manually</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Verb that describes my role today</div><div class="text-neutral-300 text-sm">Example: I describe (could be architecting)</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Is the result stable? If not, what failure mode?</div><div class="text-neutral-300 text-sm">Example: Unstable — collapse 3 (automation without rules): when I tested a bot, it promised a timeline I can’t meet</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Target step (where this task could be)</div><div class="text-neutral-300 text-sm">Example: Step 4 — an assistant with product context, rules about what it can promise, and validation before sending</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Why it’s worth moving this task up (or why to leave it as is)</div><div class="text-neutral-300 text-sm">Example: Worth scaling up: it happens hundreds of times a month, and the tone and promises need to stay consistent</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">REAL INTENTION chosen for the 4 days</div><div class="text-neutral-300 text-sm">Example: Build an AI assistant that answers my store’s customers’ frequently asked questions in the brand’s tone, without promising what I can’t deliver</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">3-mark test (Real? Repeatable? Does it matter?)</div><div class="text-neutral-300 text-sm">Example: Real: yes, every day. Repeatable: yes, hundreds/month. Matters: yes, affects sales and reputation. → Approved</div></div>
+</div>
+</div>
+</section>
+<!-- ============ E3) CHECAGEM LEVE ============ -->
+<section class="mb-14">
+<div class="inema-check bg-dark-800 border border-dark-600 rounded-xl p-6" data-inema-check="modulo-1-1#q1">
+<p class="font-medium mb-4">A small business automated its customer service with AI. With no rules defined, the assistant started offering refunds the company doesn’t provide — to dozens of customers at once. Which of the 4 failures of shallow use does this describe?</p>
+<div class="inema-check-options space-y-2">
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="0" type="button">Intention without structure = noise</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="1" type="button">Context without an objective = excess</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="2" type="button">Automation without rules = risk</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="3" type="button">AI without validation = the illusion of productivity</button>
+</div>
+<div aria-live="polite" class="mt-4 text-sm" data-inema-check-feedback="" role="status"></div>
+</div>
+</section>
+<!-- ============ E4) FACILITADOR ============ -->
+<section class="mb-14">
+<details class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<summary class="cursor-pointer font-semibold text-neutral-200">🎓 To make things easier live (in-person mode)</summary>
+<div class="mt-4 space-y-3 text-sm text-neutral-300">
+<p><strong class="text-amber-400">Total time:</strong> 90 min</p>
+<p><strong class="text-amber-400">Activity:</strong> Start with the “Fragile Prompt Roulette” (15 min): ask 3 volunteers to dictate, live, a prompt they would actually use; run it onscreen and show how the same prompt produces different results each time — the class sees firsthand the limits of “asking better.” Next, “Climb the Ladder” (25 min): in groups of 3–4, each group gets a task card (customer service, brand content, HR, legal, automation) and classifies which rung it usually sits on and where it could reach; each group presents for 2 min. Then, “Collapse Hunt” (20 min): display 4 real examples of poor results and have the class vote on which of the 4 collapses each one represents, explaining why — the facilitator reveals the answers and leads a discussion. Finally, “My Intention” (30 min): each participant individually fills out the Position on the Pyramid Map and chooses their 1 real intention; in pairs, they apply the 3-mark test to each other and refine the final statement.</p>
+<p><strong class="text-amber-400">Materials:</strong> Screen/projector with access to a live AI; printed cards with tasks by domain (customer service, brand, HR, legal, automation); 4 cases of poor results on slides for the Collapse Hunt; printed copies of the Pyramid Position Map template; pens; visible timer; board for posting the chosen intents (they'll be revisited on Day 2).</p>
+<div>
+<p class="font-semibold text-neutral-200 mb-2">Discussion questions:</p>
+<ul class="space-y-2">
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">›</span><span>Which task most often feels like it 'works sometimes and sometimes doesn’t'? What do you think is missing?</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">›</span><span>Which of your tasks repeats so often that it clearly calls for moving up a level—and why haven’t you moved up yet?</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">›</span><span>Of the 4 collapses, which affects you most day to day: noise, overload, risk, or the illusion of productivity?</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">›</span><span>Does your chosen intent pass all 3 marks? If you had to defend it to a skeptic, what would you say?</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">›</span><span>Where is improvising the right choice for you—and where has improvising already cost you dearly?</span></li>
+</ul>
+</div>
+</div>
+</details>
+</section>
+<!-- ============ E5) RESUMO DO DIA ============ -->
+<section class="mb-8">
+<div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-xl border border-amber-500/30 p-8">
+<h2 class="text-2xl font-bold mb-6 flex items-center"><span class="mr-3">✅</span>Day 1 Summary</h2>
+<ul class="space-y-3 mb-7">
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>A prompt isn’t enough: a prompt is a one-off request with no memory or criteria; relying on it for something reliable means relying on luck and trial and error.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>The AI ladder has 4 rungs—Coding, Vibe Coding, Agentic Engineering, Intention Architecture—and the diagnosis is by task, not by person.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>At each step up, the human’s role rises: execute → describe → direct → architect. Moving up means trading execution work for thinking work, not losing control.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>The shift is improvising × designing: the question changes from “How do I make a better prompt?” to “What system guides the AI?”</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>The 4 failure modes of shallow use are your diagnostic kit: intention without structure = noise; context without a goal = overload; automation without rules = risk; AI without validation = an illusion of productivity.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5">✓</span><span>You leave day 1 with the Position Map in the Pyramid filled out and 1 real intent (real, repeatable, matters) chosen for the 4 days.</span></li>
+</ul>
+<div class="bg-dark-800/60 rounded-lg p-5 mb-7 border border-dark-600">
+<h3 class="font-semibold text-amber-400 mb-2">Next:</h3>
+<p class="text-sm text-neutral-300">On day 2, you take the real intent you chose today and turn it into a project, using the Intent Architecture Canvas with its 5 pillars — Context, Objectives, Rules, Memory, and Validation. We move from SEE and DIAGNOSE to ARCHITECT: you'll give your intent a structural shape, piece by piece, closing each of the breakdowns you diagnosed today.</p>
+</div>
+<div class="flex flex-col sm:flex-row justify-start gap-4">
+<a class="text-center px-6 py-3 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors" href="index.html">← Back to landing page</a>
+<a class="text-center px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors" href="dia-2.html">Day 2 — The 5 Pillars →</a>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<footer class="border-t border-dark-600 py-8 mt-8">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+<p>Intent Architecture — an immersion <a class="text-sky-400 hover:text-sky-300" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a> · 2026</p>
+</div>
+</footer>
+<!-- SCRIPTS: nucleo v1 -->
+<script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+<!-- Camada de aprendizagem v2 -->
+<script src="../assets/learn.js"></script>
+<script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+    if (window.INEMA && INEMA.registerCheck) INEMA.registerCheck('modulo-1-1#q1', {
+      answer: 2,
+      explain: {
+        0: "Não é este: 'intenção sem estrutura' gera respostas genéricas e fora do alvo (ruído), não ações erradas em escala. O problema aqui não foi falta de clareza no pedido.",
+        1: "Não é este: 'contexto sem objetivo' produz respostas longas e dispersas por excesso de informação sem foco. Aqui o problema não foi excesso de dado, foi ausência de limite.",
+        2: "Correto: automação sem regra = risco. O assistente agiu em escala, rápido, sem limites definidos — então o erro (prometer reembolso inexistente) se multiplicou por dezenas de clientes. A peça que faltava era uma regra explícita do que ele pode e não pode oferecer.",
+        3: "Não é este: 'IA sem validação' é quando você confia num resultado que parece pronto sem checá-lo, gerando ilusão de produtividade. A causa-raiz aqui foi anterior: faltou a regra que teria impedido a ação errada, não apenas a checagem depois."
+      }
+    });
+  </script>
+</body>
+</html>

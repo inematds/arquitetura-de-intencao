@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="arquitetura-intencao" name="inema-course"/>
+<title>Day 2 — The 5 Pillars: structure the intent | Intent Architecture · INEMA.CLUB</title>
+<!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+<script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+<link href="../assets/learn.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+<script data-inema-manifest="" type="application/json">
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" },
+        { "id": "1-4", "title": "Dia 4 — A Virada", "topics": 6, "href": "dia-4.html" }
+      ]}
+    ]
+  }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+<link href="https://inematds.github.io/arquitetura-de-intencao/dia-2.html" hreflang="pt-BR" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/en/dia-2.html" hreflang="en" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/es/dia-2.html" hreflang="es" rel="alternate"/></head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen"><div class="inema-lang" style="position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:2px;padding:4px;border-radius:10px;background:rgba(12,12,16,.82);border:1px solid rgba(226,162,59,.45);font:600 12px/1 Sora,Inter,system-ui,sans-serif;backdrop-filter:blur(8px)" translate="no"><a href="../dia-2.html" hreflang="pt-BR" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">PT</a><a href="./dia-2.html" hreflang="en" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#1a1206;background:#E2A23B">EN</a><a href="../es/dia-2.html" hreflang="es" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">ES</a></div>
+<a class="skip" href="#conteudo">Skip to the content</a>
+<!-- NAVIGATION (identico em todas as paginas) -->
+<nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center h-14">
+<div class="flex items-center space-x-3">
+<a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300" href="index.html">
+<span class="text-2xl">🎯</span>
+<span class="font-bold text-lg hidden sm:inline">Intent Architecture</span>
+</a>
+<span class="text-neutral-600 hidden sm:inline">|</span>
+<a class="text-sky-400 hover:text-sky-300 text-sm font-medium" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a>
+</div>
+<div class="flex items-center space-x-1 sm:space-x-2">
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="index.html">Start</a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-1.html"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Day 1</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10" href="dia-2.html"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Day 2</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-3.html"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Day 3</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-4.html"><span class="sm:hidden">D4</span><span class="hidden sm:inline">Day 4</span></a>
+<button class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-journey-open="" title="My journey" type="button">
+<span aria-hidden="true">◷</span><span class="hidden sm:inline">Journey</span>
+<span aria-hidden="true" class="inema-journey-badge hidden" data-count="0" data-inema-journey-badge=""></span>
+</button>
+<button aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-appearance-toggle="[data-inema-appearance]" title="Appearance and reading" type="button">
+<span aria-hidden="true">◑</span><span class="hidden sm:inline">Appearance</span>
+</button>
+<button aria-label="Toggle light/dark" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" id="theme-toggle" title="Toggle light/dark">
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-dark-icon" viewbox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-light-icon" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+<div aria-label="Appearance and reading" class="inema-appearance-pop" data-inema-appearance="" role="dialog">
+<div class="inema-segment"><span class="inema-segment-label">Theme</span>
+<button data-inema-set-theme="inema-dark">Dark</button>
+<button data-inema-set-theme="claro">Clear</button>
+<button data-inema-set-theme="sepia">Sepia</button>
+<button data-inema-set-theme="foco">Focus</button>
+<button data-inema-set-theme="contraste">High contrast</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Source</span>
+<button data-inema-set-font="inter">Inter</button>
+<button data-inema-set-font="system">System</button>
+<button data-inema-set-font="leitura">Reading</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Size</span>
+<button data-inema-set-fontscale="100">A</button>
+<button data-inema-set-fontscale="112">A+</button>
+<button data-inema-set-fontscale="125">A++</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Width</span>
+<button data-inema-set-linewidth="60">Narrow</button>
+<button data-inema-set-linewidth="68">Medium</button>
+<button data-inema-set-linewidth="75">Long</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Between the lines</span>
+<button data-inema-set-leading="1.45">Compact</button>
+<button data-inema-set-leading="1.7">Comfortable</button>
+</div>
+<div aria-label="Accent color" class="inema-accent-grid">
+<button data-inema-set-accent="emerald" title="Emerald"></button>
+<button data-inema-set-accent="blue" title="Blue"></button>
+<button data-inema-set-accent="purple" title="Purple"></button>
+<button data-inema-set-accent="amber" title="Amber"></button>
+<button data-inema-set-accent="teal" title="Teal"></button>
+<button data-inema-set-accent="rose" title="Pink"></button>
+</div>
+</div>
+</nav>
+<main id="conteudo">
+<!-- A) BREADCRUMB -->
+<nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2"><div class="flex items-center gap-2 text-sm text-neutral-400"><a class="hover:text-amber-400" href="index.html">Start</a><span>/</span><span class="text-amber-400">Day 2</span></div></nav>
+<!-- B) HEADER -->
+<header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-4">DAY 2</span>
+<h1 class="text-3xl sm:text-4xl font-bold mb-3">🧱 The 5 Pillars: Structuring Intent</h1>
+<p class="text-lg text-neutral-400 max-w-3xl inema-prose">The method in practice — from an abstract idea to an operating system that delivers reliable, repeatable, aligned results.</p>
+<!-- objetivos de aprendizagem -->
+<div class="mt-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Understand the chain Intent → Context → Process → Result and use it to turn a vague idea into an operational model</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Master the 5 pillars (Context, Objectives, Rules, Memory, Validation) and know which collapse each one prevents</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Distinguish useful context from information overload: always tie context to an objective</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Write objectives as verifiable target results, not vague wishes</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Define operating rules (what is and isn’t allowed) that shield the automation from risk</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Structure memory: which patterns and decisions should persist between runs so you don’t have to start from scratch</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Build validation criteria that determine “right or wrong” without relying on your own judgment every time</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Fill in the Intention Architecture Canvas with the 5 pillars for your real case</span></div>
+</div>
+<!-- stats grid 4 col -->
+<div class="grid grid-cols-4 gap-4 mt-8 max-w-2xl">
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">7</div><div class="text-xs text-neutral-400">Topics</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">~110</div><div class="text-xs text-neutral-400">Minutes</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Hands-on</div><div class="text-xs text-neutral-400">Level</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Method</div><div class="text-xs text-neutral-400">Type</div></div>
+</div>
+</div>
+</header>
+<!-- C) WRAPPER GRID -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+<!-- ASIDE TOC -->
+<nav aria-label="Today’s index" class="hidden lg:block sticky top-24 self-start text-sm" data-inema-toc="">
+<p class="text-neutral-400 mb-2">Section <span data-inema-section-counter=""></span></p>
+<ol class="space-y-1">
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-1">1. The bridge from idea to execution</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-2">2. Pillar 1: Context</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-3">3. Pillar 2: Objectives</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-4">4. Pillar 3: Rules</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-5">5. Pillar 4: Memory</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-6">6. Pillar 5: Validation</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-7">7. The Canvas</a></li>
+</ol>
+</nav>
+<!-- COLUNA DE CONTEUDO -->
+<div>
+<!-- medidor do modulo -->
+<div aria-label="Day progress" aria-valuemax="100" aria-valuemin="0" class="mb-10" data-inema-meter="modulo:1-2" role="progressbar">
+<div class="flex justify-between text-sm mb-1.5"><span class="inema-meter-label" data-inema-meter-frac="">0 of 7</span><span class="text-amber-400 font-semibold" data-inema-meter-pct="">0%</span></div>
+<div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill=""></div></div>
+</div>
+<article data-inema-module="1-2" data-inema-track="1">
+<!-- ====================== TOPICO 1 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-1" id="topico-1">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">1</span>
+<h2 class="text-2xl font-bold">🌉 The bridge from idea to execution: the chain Intention → Context → Process → Result</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t1-p1">Every poorly used AI starts the same way: someone has an intent in mind and puts it straight into chat, expecting a finished result. The problem isn't the AI—there are missing steps between the idea and the delivery. The Intent → Context → Process → Result chain forms the bridge across those steps. When you cross it all the way, the AI stops guessing and starts executing.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p2"><strong class="text-amber-400">Intention</strong> is what you really want—almost always vague. “I want to improve customer service” is pure intention. Nobody can execute that directly, not you and not the AI. It’s a desire, not an instruction.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p3"><strong class="text-amber-400">Context</strong> is everything the AI needs to know to understand the situation: who the business is, who the customer is, what the tone is, what already exists, and what’s out of scope. Without context, the AI fills gaps with generic assumptions—and generic assumptions are the source of 90% of useless answers.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p4"><strong class="text-amber-400">Process</strong> is the sequence of steps that turns intention into a result, within rules and using memory. It’s not “the AI thinks and answers.” It’s “receive the question → check what it knows about the customer → apply the rules → draft in the right tone → validate before delivering.” Process is what makes the result REPEATABLE: tomorrow, with a different input, the same path runs again.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p5"><strong class="text-amber-400">Outcome</strong> is the concrete, verifiable deliverable: the response sent, the text published, the report generated. And here’s the key—the result only counts as a success if it meets the criteria you defined in the objective. A result without criteria is just “something the AI produced.”</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p6">The magic of the chain is that it is <strong class="text-amber-400">directional</strong>. You can’t define a good process without context. You can’t validate a result without an objective. Each link supports the next. Skip one, and you get the Day 1 breakdowns: intent without structure becomes noise; context without an objective becomes overload.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t1-p7">In practice, moving through the chain means asking four questions in order: (1) What do I really want? (2) What does the AI need to know to understand this? (3) What steps and boundaries apply? (4) How do I know it turned out right? The <strong class="text-amber-400">5 pillars</strong> of today are exactly the detailed answers to these questions.</p>
+</div>
+<!-- SVG A: a cadeia -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="The chain that turns an idea into execution: Intention becomes Context, which becomes Process, which becomes a reliable and repeatable Outcome." class="w-full h-auto" role="img" viewbox="0 0 1000 210">
+<defs>
+<lineargradient id="d2a-grad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbbf24"></stop><stop offset="1" stop-color="#f59e0b"></stop></lineargradient>
+<filter height="180%" id="d2a-glow" width="180%" x="-40%" y="-40%"><fegaussianblur result="b" stddeviation="1.8"></fegaussianblur><femerge><femergenode in="b"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge></filter>
+<pattern height="32" id="d2a-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d2a-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d2a-grid)" height="210" width="1000" x="0" y="0"></rect>
+<rect fill="#0e1b26" height="66" rx="12" stroke="#38bdf8" stroke-width="2" width="186" x="40" y="66"></rect>
+<text fill="#bfe6ff" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="133" y="95">Intention</text>
+<text fill="#9ad6ff" font-family="Inter,sans-serif" font-size="11" text-anchor="middle" x="133" y="115">what you want</text>
+<line marker-end="url(#d2a-ah)" opacity="0.7" stroke="#fbbf24" stroke-width="2" x1="230" x2="270" y1="99" y2="99"></line>
+<rect fill="#1f1604" height="66" rx="12" stroke="#fbbf24" stroke-width="2" width="186" x="274" y="66"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="367" y="95">Context</text>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11" text-anchor="middle" x="367" y="115">what the AI needs to know</text>
+<line marker-end="url(#d2a-ah)" opacity="0.7" stroke="#fbbf24" stroke-width="2" x1="464" x2="504" y1="99" y2="99"></line>
+<rect fill="#1f1604" height="66" rx="12" stroke="#fbbf24" stroke-width="2" width="186" x="508" y="66"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="16" font-weight="600" text-anchor="middle" x="601" y="95">Process</text>
+<text fill="#fcd9a0" font-family="Inter,sans-serif" font-size="11" text-anchor="middle" x="601" y="115">rules + memory in action</text>
+<line marker-end="url(#d2a-ah)" opacity="0.7" stroke="#fbbf24" stroke-width="2" x1="698" x2="738" y1="99" y2="99"></line>
+<g filter="url(#d2a-glow)"><rect fill="url(#d2a-grad)" height="74" rx="13" stroke="#f59e0b" stroke-width="2.5" width="214" x="742" y="62"></rect></g>
+<text fill="#231400" font-family="Inter,sans-serif" font-size="16" font-weight="700" text-anchor="middle" x="849" y="93">Outcome</text>
+<text fill="#3a2400" font-family="Inter,sans-serif" font-size="11" font-weight="600" text-anchor="middle" x="849" y="113">reliable and repeatable</text>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">The bridge between idea and execution: intention only becomes a result when it passes through the structure.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">A cosmetics store owner wants to use AI for WhatsApp customer service.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">“AI, reply to my store’s customers in a friendly way.” → The AI replies with anything, makes up prices, promises nonexistent delivery times, and uses a tone that doesn’t match the brand. Every response is different.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Intention: reduce response time without losing the brand’s voice. Context: vegan cosmetics shop, customers ages 25–40, warm and informal tone, catalog of 30 products, 7-day return policy. Process: read the message → identify whether it’s a product, price, or return question → answer based on the catalog → if it’s out of scope, pass it along to a person. Result: reply sent within 2 min, in the right tone, without making up information. Success = the customer didn’t have to repeat the question.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The good version carries through the entire chain. The AI stops guessing because each link (context, process, result) is connected. The same path works for every customer—it’s become a system, not luck.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write the intent in one honest sentence, even if it’s vague, before adding details</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ask 'what does the AI need to know?' before 'how should I ask?'</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Describe the process in numbered steps, not in a single sentence</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Define the success criteria at the SAME time you define the intent</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Drop the raw intention into chat and expect a ready-made result</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confusing “a well-written request” with “a well-architected system”</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Leave the success criteria to be figured out later, by eye</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Skip the context because 'the AI should already know'</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">When the result is bad, don’t rewrite the prompt first. Go back through the chain and find the missing link. 9 times out of 10, it isn’t the wording—it’s missing context or an objective that was never defined.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Intention is vague by nature</h4><p class="text-xs text-neutral-400">Every intent starts out abstract ("improve customer service"). The job of architecture is to bring the intent down until it becomes executable. It's fine to start vague—the problem is stopping while it's vague.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Each link supports the next</h4><p class="text-xs text-neutral-400">Context feeds the process; the objective feeds validation. The chain is directional: skip one link and the links below it fail. Noise, excess, risk, and illusion always mean a link is missing.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Process is what makes it repeatable</h4><p class="text-xs text-neutral-400">The difference between a good answer by luck and a system is the process. A defined process runs again tomorrow with a different input and delivers the same quality. That’s REPEATABLE in practice.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">An outcome only counts against a criterion</h4><p class="text-xs text-neutral-400">A deliverable that no one knows how to evaluate isn’t success — it’s output. A reliable outcome is one that meets the criteria defined beforehand. Without criteria, you have activity, not results.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 2 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-2" id="topico-2">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">2</span>
+<h2 class="text-2xl font-bold">🗂️ Pillar 1: CONTEXT — what the AI needs to know</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t2-p1">Context is the base of the five-pillar pyramid. It’s everything the AI needs to know about the situation to stop giving generic answers. But there’s a trap almost everyone falls into: thinking more context is always better. It isn’t. Context without an objective to filter it becomes a mountain of information that confuses more than it helps.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p2">Think of context as the <strong class="text-amber-400">briefing</strong> you’d give a new employee on their first day. What the business is, who the customer is, what the house style is, what already exists, what’s out of scope. An employee without a briefing makes things up; an AI without context does too.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p3">Context has layers. There’s the context of the <strong class="text-amber-400">business</strong> (what we sell, who it’s for, what makes us different). It has the context of <strong class="text-amber-400">client/situation</strong> (who is on the other side, what they already know, and where they are in the journey). And there’s the context of <strong class="text-amber-400">deliverable</strong> (expected format, channel, tone, language constraints). All three need to be clear.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p4">The most common mistake isn't too little context — it's unfocused context. Someone pastes the entire company manual, three PDFs, and six months of history, and thinks they're being thorough. They're creating noise. Now the AI has to guess which parts matter for this task. Too much context without filtering drowns out the signal.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p5">The context filter is the <strong class="text-amber-400">objective</strong>. Always ask: “Does this information help the AI achieve the outcome I want?” If so, include it. If it’s just “good to know,” leave it out. That’s why the pillars come in this order: context is the first thing you fill in, but the objective (the next pillar) tells you what context is relevant.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p6">Good context is <strong class="text-amber-400">specific and actionable</strong>. “Friendly customer service” isn’t context—it’s an adjective. “Warm tone, addresses the customer as ‘you,’ avoids slang, always confirms the product name before giving a price”—that’s context AI can use.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t2-p7">A practical way to test whether your context is good: give it to someone else (without explaining anything) and see if they could do the task. If they still have questions, your AI does too — it just doesn’t ask; it makes things up.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Customer service assistant for a coffee shop that sells specialty beans online.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Paste into the prompt: the HR manual, the company's founding story, the org chart, the mission/vision/values in 2 pages, and three sales reports. 'Now you know everything about the company; serve the customers.' → The AI gets lost, mixes in irrelevant information, takes too long, and still gets the essentials wrong (price and timing).</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Concise context tied to the goal of answering purchase questions: “Online coffee shop selling specialty beans. Typical customer: enjoys coffee, not an expert. Tone: warm and informative, without heavy technical jargon. Catalog: 12 beans with origin, roast, and flavor notes. Shipping time: 2 business days. Free shipping on orders over R$150. What we do NOT offer: subscriptions or in-store pickup.” → The AI answers directly, in the right tone, without making things up.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The bad version confuses “complete” with “useful.” The good one filters everything through the goal (answering purchase questions) and includes only what moves the result forward. Less information, more signal.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Cover all three layers: business, customer situation, delivery format</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Replace adjectives (“friendly”) with behaviors (“addresses you directly, without slang”)</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Include what NOT to do / what’s out of scope</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Test the context by handing it to a person without explaining: could they do the task?</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Dump entire manuals and PDFs in, thinking “complete” is better</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Treat tone as a vague adjective instead of a behavior rule</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Include “nice to know” information that doesn’t move the result forward</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Assume that “AI already knows” the basics of your specific business</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Before pasting any context block, do the highlighter test: highlight only the lines that change the answer for THIS task. Cut whatever is left unhighlighted. You’ll be surprised how much of it was clutter.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Context is the new employee’s briefing</h4><p class="text-xs text-neutral-400">Everything you’d explain to someone on their first day at work is context: business, customer, tone, what exists, what’s out of scope. Without a brief, new people and AI do the same thing — make things up.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Three layers: business, situation, delivery</h4><p class="text-xs text-neutral-400">Good context covers the business (what and for whom), the situation (who is on the other side and where they are in the journey), and the deliverable (format, channel, tone, constraints). Leave out one layer, and the AI fills it in with generic information.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The objective is the context filter</h4><p class="text-xs text-neutral-400">The question that separates context from clutter: “Does this help achieve the result?” If it’s just “good to know,” leave it out. Without the goal as a filter, more context only adds noise.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Specific and actionable, not an adjective</h4><p class="text-xs text-neutral-400">'Friendly customer service' is a wish. 'Use a friendly tone, no slang, confirm the product before giving the price' is context the AI can act on. Replace adjectives with observable behaviors.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 3 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-3" id="topico-3">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">3</span>
+<h2 class="text-2xl font-bold">🎯 Pillar 2: OBJECTIVES — what success is and why</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t3-p1">If context is what the AI needs to know, the objective is where it's headed. It's the pillar that gives direction to all the others — it filters the context, justifies the rules, and defines what validation will check. Without a clear objective, you have a well-informed AI walking in circles. An objective isn't "what I want it to do," it's "how I'll know it worked."</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p2">A bad objective describes an <strong class="text-amber-400">activity</strong>: “respond to customers.” A good objective describes the <strong class="text-amber-400">target outcome</strong>: “resolve the customer’s question in the first response, without making them repeat it.” Feel the difference? The first is an endless task; the second has a verifiable finish line.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p3">A good objective answers two questions: WHAT success is and WHY. The “what” gives you the target. The <strong class="text-amber-400">“why”</strong> provides the decision criterion for gray areas — and every real system has gray areas. When the AI (or you) doesn’t know which path to take, the “why” decides.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p4">Objectives need to be <strong class="text-amber-400">observable</strong>. If you can’t look at the result and say “met” or “not met,” the objective is still vague. “Improve the experience” isn’t observable. “Customer gets the correct answer within 2 minutes, in the brand’s tone, with no invented information” is observable—you can check it item by item.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p5">Caution with the <strong class="text-amber-400">goal inflation</strong>. Expecting a single run to be fast, thorough, creative, safe, and cheap all at once is a recipe for mediocrity across the board. Good objectives set priorities: what is the MAIN outcome, and what constraints must it not violate? “Fast, but never inventing information” is better than “fast and accurate and complete and.”</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p6">The objective also distinguishes relevant context from excess. Going back to the previous pillar: you only know the HR history is clutter because the objective is “answer purchase questions.” Change the objective to “train a new customer service rep,” and the HR history becomes relevant. Context isn’t good or bad in itself — it’s good or bad FOR AN OBJECTIVE.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t3-p7">A practical way to write it: complete the sentence "<strong class="text-amber-400">It worked when ___ , measured by ___ , because ___</strong>.” If you can’t fill in all three spaces, the objective isn’t ready yet.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Customer service assistant for a small online clothing store.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Objective: “Provide great customer service and increase sales.” → Nobody knows when that’s been achieved. The AI has no way to choose between “respond quickly” and “respond thoroughly.” Validation is impossible because there’s no target.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Objective: “It worked when the customer gets the information they came for (size, delivery time, exchange) without human help, measured by: a correct and complete answer in up to 1 message; because every unresolved question leads to an abandoned cart.” → Now the AI prioritizes resolution in the first response, and you can validate by checking whether the question was answered.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> A good objective fills in all three parts: what (the information the customer came to find), how to measure it (correct and complete in 1 message), and why (cart abandonment). This filters context, guides rules, and enables validation. The bad one gives nothing direction.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write the objective as a verifiable result, not a task</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Always include the "why" — it determines ambiguous cases</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Complete the sentence 'It worked when ___, measured by ___, because ___'</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Choose ONE primary result and list the nonnegotiable constraints</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Objectives that describe an endless activity (“answer customers”)</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Stacking five conflicting goals into the same run</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Unobservable adjectives like “better” or “more efficient,” with no measure</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Leave the “why” implicit in your head instead of writing it down</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Colleague test: read your objective to someone and ask them to describe how they would check whether it was achieved. If they hesitate or come up with their own criteria, your objective isn't observable yet.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Target outcome, not activity</h4><p class="text-xs text-neutral-400">'Reply to customers' is an endless activity. 'Resolve the issue in the first reply without making the customer repeat themselves' is a target outcome with a finish line. A good objective has an end point and a way to check it.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The 'why' decides gray areas</h4><p class="text-xs text-neutral-400">Every real system encounters ambiguous situations. That's why the objective's purpose serves as a compass: when there's no explicit rule, the AI (and you) decide based on the reason. An objective without a why gets stuck in the gray area.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Observable or it’s not ready</h4><p class="text-xs text-neutral-400">If you can't look at it and say "met/not met," the objective is vague. Replace "improve the experience" with something you can check item by item. Vague is how unfinished work disguises itself.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Prioritize: one target, clear constraints</h4><p class="text-xs text-neutral-400">Trying to be fast + thorough + creative + cheap all at once delivers mediocrity across the board. Choose the main outcome and list the constraints it must not violate. “Fast, but never making things up” beats “everything at once.”</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 4 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-4" id="topico-4">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">4</span>
+<h2 class="text-2xl font-bold">🚧 Pillar 3: RULES — operating limits</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t4-p1">Context and objectives say what to do and where to go. Rules say where NOT to go. They are the operating boundaries — the lines the AI does not cross, even if it seems like a good idea at the time. And here lies a dangerous failure mode: the more you automate, the more each error multiplies. Automation without rules isn’t just unproductive — it’s risky.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p2">A rule is different from an objective. An objective is what you want to happen; <strong class="text-amber-400">rule</strong> is what you won’t allow to happen under any circumstances. “Resolve the question quickly” is an objective. “Never provide a price without confirming the exact product” is a rule. The objective can be flexible; the rule can’t.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p3">Rules exist because AI is <strong class="text-amber-400">confident even when it’s wrong</strong>. It won’t hesitate to invent a delivery deadline or promise a discount that doesn’t exist. Rules are the barriers that keep its confidence from becoming your problem. Think of them as the handrails on a staircase: most of the time you don’t even touch them, but when you stumble, they keep you from falling.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p4">There are three types of rules every system needs. <strong class="text-amber-400">Prohibitions</strong> (what it must never do: make up information, promise what it can’t deliver, talk about competitors, give legal or medical advice). <strong class="text-amber-400">Obligations</strong> (what it must always do: verify identity before sharing sensitive information, cite the source, maintain the tone). And <strong class="text-amber-400">escape routes</strong> (what to do when something is out of scope: “if it’s a serious complaint, refer it to a human; don’t try to resolve it on your own”).</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p5">A <strong class="text-amber-400">escape route</strong> is the most underestimated and most important rule. Systems don’t break on the happy path—they break at the edges. Explicitly defining what the AI does when it DOESN’T know, when the request is out of scope, or when the risk is high is what separates a professional system from a toy. Without an escape route, the AI improvises exactly when improvising is most dangerous.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p6">The more automated it is, the more the rules matter—and that’s the counterintuitive part. When YOU respond to every message, your judgment is the rule. When AI responds to 500 messages on its own, a rule error doesn’t happen once: it happens 500 times before you notice. <strong class="text-amber-400">Scale multiplies successes AND errors.</strong> Rules ensure that only successes scale.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t4-p7">A good rule is specific and testable, just like an objective. “Be careful with data” isn’t a rule. “Never repeat an SSN, address, or credit card number in the response” is a rule—you can check whether it was violated.</p>
+</div>
+<!-- TIMELINE: os três tipos de regra como processo -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">The three types of rule, in order</h3>
+<div class="relative pl-4 mb-8">
+<div aria-hidden="true" class="absolute left-[19px] top-2 bottom-2 w-px bg-dark-600"></div>
+<ol class="space-y-5">
+<li class="flex items-start gap-4">
+<span class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">1</span>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4 flex-1"><h4 class="font-semibold text-amber-400 text-sm mb-1">Prohibitions</h4><p class="text-sm text-neutral-300">What never to do: make up data, promise the impossible, talk about competitors, or give legal or medical advice. These are absolute red lines.</p></div>
+</li>
+<li class="flex items-start gap-4">
+<span class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">2</span>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4 flex-1"><h4 class="font-semibold text-amber-400 text-sm mb-1">Obligations</h4><p class="text-sm text-neutral-300">What to always do: confirm identity before sharing sensitive data, cite the source, maintain the tone, and confirm the product before quoting the price. What applies to every run.</p></div>
+</li>
+<li class="flex items-start gap-4">
+<span class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 font-bold flex-shrink-0">3</span>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4 flex-1"><h4 class="font-semibold text-amber-400 text-sm mb-1">Escape routes</h4><p class="text-sm text-neutral-300">What to do when something is out of scope: serious complaint, request outside the catalog, high risk → hand off to a human instead of improvising. This is where systems break, and it’s the most underestimated rule.</p></div>
+</li>
+</ol>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Customer service assistant for a skincare clinic.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Without rules: "Answer patients' questions." → The AI recommends procedures on its own, gives a "medical opinion" on whether someone needs Botox, promises results, and quotes prices from a list that's already changed. Every one of these responses is a legal and reputational risk — multiplied by every patient.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">With limits: PROHIBITIONS — never give a diagnosis or medical recommendation; never promise results; never quote a price unless it's from the attached current price list. OBLIGATIONS — always say that a professional will assess the patient during the consultation; always confirm which procedure the patient is asking about. ESCAPE ROUTE — any clinical question ('is this safe for me?') becomes: 'That assessment is individual, and our professional will review it during the consultation — would you like me to schedule one?'</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The good version closes exactly the gaps where a confident AI could cause harm. The escape route turns a dangerous question (clinical) into a safe action (scheduling). Risk stops escalating because the rule scales too.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>List absolute prohibitions in testable sentences (“never repeat CPF”)</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Define the fallback route for each type of out-of-scope question</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write obligations that always apply (“always confirm the product before the price”)</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Review rules with scale in mind: 'what if this runs 500 times?'</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Vague, untestable rules ('be careful,' 'use common sense')</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confusing a rule (non-negotiable) with an objective (flexible)</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Forgetting the escape route — that’s where systems break</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Let the AI improvise at the edges, exactly where improvising is most costly</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Do a 5-minute premortem: 'if this system causes a serious problem, what was it?'. The 3 scariest answers become your first 3 rules. You are designing against the worst case, not the happy path.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rule ≠ objective</h4><p class="text-xs text-neutral-400">An objective is what you want to happen and can be flexible. A rule is what you never allow to happen. “Resolve quickly” is flexible; “never give a price without confirming the product” isn’t. Don’t mix the two.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">AI is confident even when it’s wrong</h4><p class="text-xs text-neutral-400">It won’t hesitate to invent a deadline or promise a discount that doesn’t exist. Rules are the handrails that keep its confidence from costing you money. You barely touch them — until the day you stumble.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Three types: prohibition, obligation, escape route</h4><p class="text-xs text-neutral-400">Prohibitions (never invent data, never promise the impossible), obligations (always confirm, always cite a source), and escape routes (when it goes out of scope, hand it off). Leave out one type, and you create a gap.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Scale multiplies rule errors</h4><p class="text-xs text-neutral-400">When you respond, your judgment is the rule. When AI responds 500 times, a hole in the rule becomes 500 holes before you notice. Automation without rules isn’t unproductive—it multiplies risk.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 5 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-5" id="topico-5">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">5</span>
+<h2 class="text-2xl font-bold">🧠 Pillar 4: MEMORY — what persists between runs</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t5-p1">The first three pillars work within ONE run. Memory is what connects one run to the next. It’s the pillar that makes your system STOP starting from scratch every time. Without memory, you have to re-explain everything each time—and the AI repeats the same mistakes, forgets your preferences, and never improves. With memory, the system accumulates knowledge. That’s the difference between a tool and something that learns from you.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p2">Memory here isn't the technical jargon of a 'context window.' It's an architecture concept: what patterns, knowledge, and decisions should <strong class="text-amber-400">persist</strong> so you don’t have to recreate them every time you run them. It’s the difference between an employee you train once and an intern who changes every week.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p3">There are three things worth memorizing. <strong class="text-amber-400">Patterns and preferences</strong>: “we always sign responses with the store’s name,” “our tone avoids excessive exclamation points,” “this customer has purchased before and prefers to be addressed by their first name.” <strong class="text-amber-400">Stable knowledge</strong>: the catalog, the exchange policy, the FAQs—information that changes slowly and doesn’t need to be pasted in every time. <strong class="text-amber-400">Decisions already made</strong>: “we’ve already decided we don’t provide phone support,” “the standard response to a discount request is X”—so you don’t reopen the same discussion every time.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p4">The classic mistake is treating every interaction as the first one. The person explains the business again, pastes in the catalog again, and rewrites the rules in every conversation. That's inefficient and, worse, inconsistent — because each time they explain it a little differently, and the system responds a little differently. Memory is what ensures <strong class="text-amber-400">consistency</strong> over time, not just within a single response.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p5">Memory is also where the system IMPROVES. Every time you correct the AI ('no, our turnaround time is 2 days, not 3'), this <strong class="text-amber-400">correction</strong> should become memory — otherwise, you’ll fix the same thing tomorrow. A well-designed system captures corrections and good examples, then reuses them. Without that, you’re in a Sisyphus loop: pushing the same rock every day.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p6">But memory has the same limit as context: not everything is worth remembering. Memorizing junk is as bad as remembering nothing—it becomes a bloated history of outdated information that pollutes responses. The rule is: memorize what is <strong class="text-amber-400">stable and reusable</strong>. Information that changes all the time isn’t memory; it’s momentary data. And memory needs to be updated: an outdated policy stored in memory is worse than no policy at all, because the AI applies it with confidence.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t5-p7">In practice, your memory can be simple: a living document with 'business facts,' 'tone and patterns,' 'decisions,' and 'recent corrections.' You don't need sophisticated technology to get started. You need the discipline to write something once and reuse it every time.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Customer service assistant for a tattoo studio.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Without memory: for every client, the owner pastes in "we're a studio in SP, we do fine-line work, bookings are through Instagram, 30% deposit...". When they correct the AI ("the deposit is now 40%"), the correction is lost — the next day the AI goes back to saying 30%. Every conversation starts from scratch.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">With living memory: a document with FACTS ('studio in São Paulo, fineline specialty, 40% deposit — updated in Jun/26'), PATTERNS ('casual tone, addresses people as you, always asks for a visual reference before quoting'), DECISIONS ('we don't do cover-ups — refer to a partner'), and recent CORRECTIONS. The AI always draws from this; when the deposit changes, you update ONE line and the whole system gets it right.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The good version turns every correction into a permanent improvement and ensures consistency across conversations. The owner writes it once and reuses it every time instead of explaining it again and making the same mistake again. The system accumulates instead of starting from zero.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Keep a living document: facts, patterns/tone, decisions, corrections</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Date stable information so you know when to review it (“40% signal — Jun/26”)</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Turn every recurring correction into a line of memory</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Remember only what is stable and reusable</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Re-explain the entire business in every new conversation</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Let fixes get lost and make the same mistake again tomorrow</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Bloat the memory with momentary data that keeps changing</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Keep an outdated policy in memory—the AI applies it confidently</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Create the “two strikes” rule: if you’ve had to explain the same thing to the AI twice, the third time it becomes a line in memory. This simple habit turns repeated frustration into a system that improves on its own.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Persistence means not starting from scratch</h4><p class="text-xs text-neutral-400">Memory connects one run to the next. Without it, you explain everything again each time you use it, and the AI repeats the same mistakes. With it, the system accumulates knowledge. It's the difference between training an employee and replacing an intern every week.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Three things are worth remembering</h4><p class="text-xs text-neutral-400">Patterns/preferences (tone, sign-off, how to treat each customer), stable knowledge (catalog, policies, FAQ), and decisions already made (what’s already been resolved). Everything else is situational data, not memory.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">A fix becomes a memory or a loop</h4><p class="text-xs text-neutral-400">Every correction you make ('the lead time is 2 days, not 3') needs to become memory—otherwise you'll correct the same thing tomorrow. Capturing corrections is how the system improves. Not capturing them means pushing the boulder of Sisyphus.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Remember stable information; always update it</h4><p class="text-xs text-neutral-400">Only memorize what is stable and reusable; memorized junk creates as much clutter as having no memory. And outdated memory is worse than none—the AI applies the old policy with complete confidence.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 6 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-6" id="topico-6">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">6</span>
+<h2 class="text-2xl font-bold">✅ Pillar 5: VALIDATION — how to know if it’s right</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t6-p1">This is the pillar that completes the system — and the one most often ignored. Validation is how you know, without relying on your own eyes every time, whether the result is correct. Without it, the most treacherous collapse of all occurs: the illusion of productivity. The AI produces a lot, quickly, with an impeccable appearance — and you assume it’s right because it LOOKS right. Impressive volume isn’t quality. Validation is what distinguishes the two.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p2">AI is dangerously good at <strong class="text-amber-400">seem right</strong>. It writes confidently, formats things beautifully, uses the right tone—and may deliver completely wrong information with the same air of certainty as when it’s right. That’s why “looks good” can never be your standard. You need validation that doesn’t depend on appearances.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p3">Validation answers one question: “How do I know this is right WITHOUT having to check it by eye myself every time?” It comes directly from the objective. Remember the <strong class="text-amber-400">'it worked when ___, measured by ___'</strong>? That “measured by” is your validation criterion. A well-crafted objective already gives you half of the validation criteria.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p4">There are levels of validation, from the simplest to the most robust. <strong class="text-amber-400">Checklist</strong>: a list of criteria every output must meet (“did it answer the question? is the tone right? did it make up any information? did it cite the source?”). <strong class="text-amber-400">Automatic rule</strong>: checks that don’t need you (“does the response include a price? Then it must match the price list”). <strong class="text-amber-400">Cross-check</strong>: ask the AI itself to critique the output against the criteria before delivering it. And <strong class="text-amber-400">human sampling</strong>: you don’t check everything, but you check a sample to calibrate your trust in the system.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p5">The key point: validation has to be <strong class="text-amber-400">DEFINED UP FRONT</strong> of the result. If you only know whether it’s good after seeing it, you don’t have validation — you have an opinion. The standard for truth is written in advance so anyone (or the AI itself) can apply it and reach the same conclusion. That’s what makes the result TRUSTWORTHY in the literal sense: you can trust it without reinspecting everything.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p6">Validation is also what lets you scale safely. Without it, automation is a gamble — you multiply production without multiplying quality assurance. With it, you can let AI run because you have a filter that catches errors before they become problems. Validation is the <strong class="text-amber-400">safety net</strong> that lets you move faster.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t6-p7">The most common mistake: confusing 'the AI responded' with 'the AI got it right.' A generated response is output; a validated response is a result. Professional systems never trust raw output — there's always a <strong class="text-amber-400">validation gate</strong> between what the AI generates and what becomes a real deliverable.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Assistant that drafts customer service replies for an online course.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">'The AI gave a polished answer in the right tone, so I sent it straight to the student.' → Three days later, you find out the AI said the course has a certificate recognized by MEC (it doesn’t) and promised lifetime access (it’s 1 year). It looked flawless — and created two false promises that turned into a headache.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">Validation checklist applied to EVERY response before sending: (1) Did it actually answer the student's question? (2) Does every factual detail (price, timing, certificate, access) match the official source? (3) Did it avoid promising anything outside the policy? (4) Is it in the course's tone? A response is sent only if it passes all 4. For factual claims about certificates/access, checking against the official document is mandatory.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The good version doesn’t trust appearances—it trusts criteria defined in advance. The checklist catches exactly the kind of error that “looks good” can hide: an incorrect factual claim that seems right. It only goes into production after passing the gate.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Derive the validation checklist directly from the objective’s “measured by” clause</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Write the criteria BEFORE seeing the result</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Treat every factual claim (price, timeline, promise) as a mandatory verification item</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Using AI itself to critique the output against the criteria before you do</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Using “looks good” or “looks nice” as the approval criterion</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confusing “the AI answered” with “the AI got it right”</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Validating by eye alone every time, without written criteria — that’s an opinion</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Scaling the automation without an intermediate validation gate</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">Always ask: 'what error in this output would only show up a week from now?'. Errors that take time to appear (incorrect factual information, an improper promise) are the ones that appearances hide—and they’re exactly what your checklist needs to catch now.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">AI is great at LOOKING right</h4><p class="text-xs text-neutral-400">Confidence, formatting, and tone can all be right while the information is wrong. “Looks good” is never a criterion. You need validation that doesn’t depend on appearances — because appearances are exactly where AI is most misleading.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Validation comes from the objective</h4><p class="text-xs text-neutral-400">The 'measured by' part of your objective is already the validation criterion. An observable objective gives you half the validation upfront. If you have no way to validate it, that's a sign the objective was still vague.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Definable BEFORE, not after</h4><p class="text-xs text-neutral-400">If you only know whether it was good after you see it, that's opinion, not validation. A real criterion is written in advance, and anyone can apply it and reach the same conclusion. That's what makes the result truly reliable.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Generated response ≠ validated response</h4><p class="text-xs text-neutral-400">Generating is production; validating is the result. Confusing the two is the illusion of productivity. A professional system always puts a validation gate between what the AI generates and what becomes a real deliverable.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 7 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-2#topico-7" id="topico-7">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">7</span>
+<h2 class="text-2xl font-bold">🗺️ The Intent Architecture Canvas</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Flag a question about this topic" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">I have a question</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-2-t7-p1">You assembled the five pieces separately. Now they become a system. The Intention Architecture Canvas is a single sheet that brings together Context, Objectives, Rules, Memory, and Validation for a real intention — yours. It’s not a slide exercise: it’s the operational document that turns “I want AI to do X” into something that runs reliably, repeatedly, and in alignment. When the five fields work together, you’ve stopped improvising and started designing.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p2">The Canvas works because the pillars aren't independent — they <strong class="text-amber-400">fit</strong>. The objective filters the context. The rules protect the objective. Memory feeds the context without starting over. Validation checks the objective. Filling in the Canvas forces these connections to surface. When one field doesn’t connect to the others, you’ve found a gap in your system.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p3">A <strong class="text-amber-400">filling order</strong> matters. Start with INTENT in one sentence (even if it’s vague). Then OBJECTIVE, because it filters everything else. Next, CONTEXT (only what serves the objective), RULES (the limits that protect the objective), MEMORY (what persists so you don’t start over), and finally VALIDATION (derived directly from the objective). This is the chain from topic 1 turned into a document.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p4">The Canvas has a <strong class="text-amber-400">consistency check</strong> built in. Reread the five fields and ask: Does the validation really check the objective? Do the rules protect against the real risks? Does the context include anything the objective doesn’t call for? Does the memory capture recurring things? If any answer is no, the system has a crack — and it’s better to find it now, on paper, than in production.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p5">A good Canvas fits on ONE page. That’s intentional. If you need five pages, either the intention is too big (split it in two) or you’re filling it with clutter (go back to the objective filter). The space constraint forces you to <strong class="text-amber-400">prioritization</strong> — which is precisely the skill that separates an architect from a hoarder.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p6">The Canvas isn't static. It's a <strong class="text-amber-400">living document</strong>: memory grows with corrections, rules gain new edge cases, and validation gets refined as you discover errors. Filling out the Canvas today is version 1. Using, reviewing, and improving it is what makes it a real asset for your business.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-2-t7-p7">And here’s the conceptual leap for today: when you fill out the Canvas, your focus is no longer on the AI — it’s on the <strong class="text-amber-400">SYSTEM that guides the AI</strong>. You stopped thinking “what prompt should I write?” and started thinking “what structure makes every run reliable?” That’s the step up to Intent Architecture. The Canvas is its tangible form.</p>
+</div>
+<!-- SVG B: o templo dos 5 pilares -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="Intent Architecture as a temple: the roof is the system, supported by five pillars—Context, Objectives, Rules, Memory, and Validation—on a foundation of reliable, repeatable, aligned results." class="w-full h-auto" role="img" viewbox="0 0 1000 320">
+<defs>
+<lineargradient id="d2b-grad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbbf24"></stop><stop offset="1" stop-color="#f59e0b"></stop></lineargradient>
+<filter height="160%" id="d2b-glow" width="160%" x="-30%" y="-30%"><fegaussianblur result="b" stddeviation="1.8"></fegaussianblur><femerge><femergenode in="b"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge></filter>
+<pattern height="32" id="d2b-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+</defs>
+<rect fill="url(#d2b-grid)" height="320" width="1000" x="0" y="0"></rect>
+<!-- teto -->
+<g filter="url(#d2b-glow)"><path d="M240,46 L760,46 L840,92 L160,92 Z" fill="url(#d2b-grad)" stroke="#f59e0b" stroke-width="2.5"></path></g>
+<text fill="#231400" font-family="Inter,sans-serif" font-size="16" font-weight="700" text-anchor="middle" x="500" y="76">INTENTION ARCHITECTURE</text>
+<!-- 5 pilares -->
+<g font-family="Inter,sans-serif">
+<rect fill="#0e1b26" height="150" rx="8" stroke="#38bdf8" stroke-width="2" width="84" x="180" y="100"></rect>
+<text fill="#bfe6ff" font-size="12.5" font-weight="600" text-anchor="middle" x="222" y="128">Context</text>
+<text fill="#9ad6ff" font-size="10" text-anchor="middle" x="222" y="146">what to know</text>
+<text fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle" x="222" y="238">1</text>
+<rect fill="#0e1b26" height="150" rx="8" stroke="#38bdf8" stroke-width="2" width="84" x="316" y="100"></rect>
+<text fill="#bfe6ff" font-size="12.5" font-weight="600" text-anchor="middle" x="358" y="128">Objectives</text>
+<text fill="#9ad6ff" font-size="10" text-anchor="middle" x="358" y="146">what success looks like</text>
+<text fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle" x="358" y="238">2</text>
+<rect fill="#0e1b26" height="150" rx="8" stroke="#38bdf8" stroke-width="2" width="84" x="452" y="100"></rect>
+<text fill="#bfe6ff" font-size="12.5" font-weight="600" text-anchor="middle" x="494" y="128">Rules</text>
+<text fill="#9ad6ff" font-size="10" text-anchor="middle" x="494" y="146">limits</text>
+<text fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle" x="494" y="238">3</text>
+<rect fill="#0e1b26" height="150" rx="8" stroke="#38bdf8" stroke-width="2" width="84" x="588" y="100"></rect>
+<text fill="#bfe6ff" font-size="12.5" font-weight="600" text-anchor="middle" x="630" y="128">Memory</text>
+<text fill="#9ad6ff" font-size="10" text-anchor="middle" x="630" y="146">what persists</text>
+<text fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle" x="630" y="238">4</text>
+<rect fill="#0e1b26" height="150" rx="8" stroke="#38bdf8" stroke-width="2" width="84" x="724" y="100"></rect>
+<text fill="#bfe6ff" font-size="12.5" font-weight="600" text-anchor="middle" x="766" y="128">Validation</text>
+<text fill="#9ad6ff" font-size="10" text-anchor="middle" x="766" y="146">is it correct?</text>
+<text fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle" x="766" y="238">5</text>
+</g>
+<!-- base -->
+<rect fill="#1f1604" height="44" rx="9" stroke="#fbbf24" stroke-width="2" width="680" x="160" y="258"></rect>
+<text fill="#fbbf24" font-family="Inter,sans-serif" font-size="13.5" font-weight="600" text-anchor="middle" x="500" y="285">Reliable, repeatable, aligned outcome</text>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Remove one pillar and the roof caves in: all five support the intent together.</p>
+</div>
+<!-- exemplo pronto -->
+<p class="text-sm text-neutral-400 italic mb-3">Entrepreneur building a customer support assistant for a small business.</p>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Fragile</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">There's a big prompt saying 'be friendly, respond quickly, know everything about the store.' All the pillars are jumbled together in a mental folder: context and rules in the same sentence, an implicit objective, no validation. It works sometimes, fails without the user understanding why, and can't be improved because you can't see the parts.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Structured</h4>
+<p class="text-sm text-neutral-300 leading-relaxed">A one-page Canvas: clear INTENTION, an observable OBJECTIVE that filters everything else, concise CONTEXT, RULES with prohibitions/obligations/escape routes, living and dated MEMORY, and VALIDATION in a checklist derived from the objective. Each field connects to the others and passes the consistency test. When it fails, it identifies which pillar broke and fixes ONE field.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mb-6"><strong class="text-neutral-300">Why it changes:</strong> The good version makes the system VISIBLE and diagnosable. Failure stops being a mystery and becomes “which pillar failed?” That’s the difference between improvising (a confused mental prompt) and designing (an explicit system that can be fixed). This is the leap to Intention Architecture.</p>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ What to DO</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Fill in this order: intention → objective → context → rules → memory → validation</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Run the coherence test: does each field connect with the others?</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Keep it on ONE page—cutting until it fits is part of the method</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Treat it as a living document: date it, review it, and improve it through use</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ What to AVOID</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Mixing pillars in the same sentence (context becomes a rule, which becomes an objective)</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Leave validation out “because you can eyeball it”</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Filling the Canvas with clutter instead of filtering by objective</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Fill it in once and never review it again—it becomes a dead trophy</span></li>
+</ul>
+</div>
+</div>
+<!-- dica -->
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Practical tip</h3>
+<p class="text-neutral-300 text-sm">After filling it out, do the “substitute test”: if you disappeared for a week, could someone with only the Canvas operate the system in your place? If so, you’ve architected it. If not, you’ve found the field that’s still in your head instead of on paper.</p>
+</div>
+<!-- conceitos-chave -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Key concepts</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-2">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The pillars fit together; they don’t sit loose</h4><p class="text-xs text-neutral-400">The objective filters context, rules protect the objective, memory feeds context, and validation checks the objective. The Canvas forces these connections to show up. A field that doesn’t connect to the others is a gap in the system.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">The order for filling it in is the chain</h4><p class="text-xs text-neutral-400">Intention → Objective → Context → Rules → Memory → Validation. The objective comes early because it filters everything else; validation follows from it. Filling things in the right order turns the chain from topic 1 into a document.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Fits on one sheet — by design</h4><p class="text-xs text-neutral-400">If it runs longer than one page, either the intention is too big (break it down) or there's clutter (go back to the objective filter). The space constraint forces prioritization — the skill that separates an architect from a hoarder.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">A living document, not a trophy</h4><p class="text-xs text-neutral-400">Memory grows through corrections, rules gain sharper boundaries, and validation improves with the mistakes you uncover. Today's Canvas is v1. The real value comes from using, reviewing, and improving it — that's how it becomes a business asset.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Mark as read</span><span class="inema-label-done">Read</span>
+</button>
+</div>
+</section>
+</article>
+<!-- E1) EXERCICIOS PRATICOS -->
+<section class="mb-14">
+<h2 class="text-2xl font-bold mb-2">🛠️ Practical Exercises</h2>
+<p class="text-neutral-400 mb-6 inema-prose">Use your real case. The answer key is an example, not the only correct answer.</p>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">1. Crossing the chain: from vague intent to an operational model</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Practice turning an abstract intention into the chain Intention → Context → Process → Outcome.</p>
+<p class="text-sm text-neutral-300 mb-4">Take a REAL intention you have for using AI (e.g., 'I want to use AI to reply to customer emails,' 'I want AI to create posts for my brand'). Write it as is in one sentence. Then work it through the four links in the chain, filling in each one. At the end, define in one sentence what verifiable SUCCESS would look like.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Write your raw intent in 1 sentence (it can be vague)</li>
+<li>CONTEXT: list what the AI needs to know (business, situation, format)</li>
+<li>PROCESS: describe in 3-5 numbered steps how the task happens</li>
+<li>RESULT: describe the specific deliverable you expect</li>
+<li>End with 'It worked when ___' (verifiable criterion)</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">Raw intention: “I want to use AI to answer customer questions in the DMs for my plant shop on Instagram.”
+
+CONTEXT: Indoor plant shop, with beginner customers who kill plants by overwatering. Warm tone, no botanical jargon. Catalog of 20 plants with care levels (easy/medium). We deliver in the city of São Paulo within 3 business days. We don’t offer paid landscaping consultations.
+
+PROCESS: (1) Read the DM and classify it as a care, purchase/price, or delivery question. (2) If it’s about care, answer with a tip for the specific plant in an informative tone. (3) If it’s about a purchase/price, confirm which plant and give the catalog price. (4) If it’s about delivery, provide the timeline and service area. (5) If it’s out of scope (landscaping, repotting at home), offer to pass it along to a person.
+
+RESULT: A DM reply in the brand’s tone that answers the question in 1 message without making up information.
+
+Success means: the customer gets the correct information they came for in 1 reply, without having to repeat the question—because every question that isn’t resolved right away can mean a lost sale.</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: If you get stuck on PROCESS, imagine you’re teaching a new employee to do the task step by step. Everything you’d tell them is a step.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">2. Find the excess context</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Practice filtering context by objective—separate signal from noise.</p>
+<p class="text-sm text-neutral-300 mb-4">Below is an overstuffed block of “context” that someone might paste into a chat. The system’s goal is: “answer customers’ purchase questions in the online store.” Your task: highlight (mark) what is RELEVANT to that goal and CUT the rest, explaining 1–2 cuts. Then rewrite the context in a concise form.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Read the bloated block below</li>
+<li>Mark each line as KEEP or CUT, using the objective as your filter</li>
+<li>Justify at least 2 cuts</li>
+<li>Rewrite the final context using only what remains</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">Bloated block: “We’re Café Aurora, founded in 2019 by two brothers who love coffee. Our mission is to bring quality coffee to Brazil. We sell 12 specialty coffees online, from R$45 to R$90 per 250g package. Free shipping on orders over R$150; ships in 2 business days. Our office is in Curitiba and we have 8 employees. Return policy: 7 days. We won a regional award in 2022. We don’t offer subscriptions or grind-to-order.”
+
+KEEP (relevant to purchase questions): 12 specialty coffees, price range R$45-90/250g; free shipping over R$150, ships in 2 business days; 7-day return policy; we don’t offer subscriptions or grind-to-order.
+
+CUT: “founded in 2019 by two brothers” (history doesn’t answer a purchase question); “mission to bring coffee to Brazil” (corporate, not actionable); “office in Curitiba, 8 employees” (irrelevant to the customer’s purchase); “2022 regional award” (doesn’t change the answer about price, timing, or returns).
+
+Final streamlined context: “Online store with 12 specialty coffees, R$45-90 per 250g package. Free shipping over R$150; ships in 2 business days. 7-day returns. We do NOT offer subscriptions or grind-to-order.”</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: Ask of every line: “Does this change the answer to a PURCHASE question?” If not, cut it—even if it’s “nice” information about the company.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">3. Rewrite the activity objective as an outcome objective</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Turn vague goals into verifiable target outcomes using the formula “success means / measured by / because.”</p>
+<p class="text-sm text-neutral-300 mb-4">For each vague goal below, rewrite it as an outcome goal by filling in the three blanks: “It worked when ___, measured by ___, because ___.” These are three cases from different domains.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Read the vague objective</li>
+<li>Identify the hidden ACTIVITY and what the RESULT would be</li>
+<li>Fill in 'successful when' (what), 'measured by' (how to check), and 'because' (the reason)</li>
+<li>Make sure 'measured by' is observable</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">1) Vague: “Use AI to improve my marketing.” -&gt; Outcome: “It worked when I publish 3 posts a week in the brand’s voice without getting stuck on a blank page, measured by: posts go out on schedule and pass my brand checklist (voice, CTA, no false promises), because a consistent posting schedule is what builds an audience—and I used to stop because I ran out of ideas.”
+
+2) Vague (HR): “Use AI to speed up resume screening.” -&gt; Outcome: “It worked when I get a presorted list of candidates who meet the 5 mandatory job requirements, measured by: no candidates who fail to meet the mandatory requirements make the shortlist, and no disqualifying requirement is overlooked, because the bottleneck is manually reading 200 resumes, and screening mistakes lead to bad hires.”
+
+3) Vague (content): “Use AI to write better.” -&gt; Outcome: “It worked when the text is clear and in MY voice, ready with no more than 1 round of edits, measured by: it passes the checklist (short sentences, no jargon, concrete example, direct tone) and I would change less than 20% of it, because what holds me back is having to rewrite generic AI text from scratch.”</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: If someone else can’t verify your “measured by” criterion without asking you anything, it’s still vague. Tighten it until it’s verifiable.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">4. Pre-mortem and rule building</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Derive operating rules (prohibitions, requirements, escape routes) from the real risks in your case.</p>
+<p class="text-sm text-neutral-300 mb-4">For YOUR real intention (the same one from Exercise 1, if you like), do a pre-mortem: “If this system causes a serious problem in production, what happened?” List 3 disaster scenarios. Then turn each one into at least one rule, classifying it as a Prohibition, Obligation, or Escape Route.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Imagine the system running on its own 500 times</li>
+<li>List 3 plausible disasters (“the AI promised X, which we can’t deliver”)</li>
+<li>For each disaster, write 1-2 rules that would prevent it</li>
+<li>Classify each rule: Prohibition / Obligation / Escape route</li>
+<li>Make sure each rule is testable (you can check whether it was violated)</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">Case: DM assistant for a plant store.
+
+Disaster 1: the AI promises delivery to an area we don't serve. -&gt; PROHIBITION: 'Never confirm delivery outside the city of São Paulo.' OBLIGATION: 'Always confirm the customer's city before discussing timing/delivery.'
+
+Disaster 2: the AI gives incorrect care advice and the customer's plant dies. -&gt; OBLIGATION: 'Only give care advice listed in that plant's catalog entry; never improvise care advice beyond it.' PROHIBITION: 'Never state a diagnosis explaining why someone's plant is dying without them sending a photo/description.'
+
+Disaster 3: a customer sends a serious complaint (the plant arrived broken) and the AI tries to handle it alone, offering an unauthorized refund. -&gt; ESCAPE ROUTE: 'For a damaged product complaint or refund request: ask for a photo, log it, and forward it to a human. The AI never authorizes a refund or exchange on its own.'
+
+Test: each rule above is verifiable — you can look at a response and tell whether it was violated (promised delivery outside São Paulo? improvised care advice? offered a refund?).</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: The best disasters to list are the ones that would show up only later—an improper promise, invented data, outdated information. Those are the things appearances hide.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">5. Build the system’s living memory</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Structure what should persist between runs and practice capturing corrections.</p>
+<p class="text-sm text-neutral-300 mb-4">Create the “living memory” for your case in four blocks: FACTS (stable, dated), PATTERNS/TONE, DECISIONS, and FIXES. Then simulate two fixes you would make to the AI and show how each becomes a line in memory.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>List stable BUSINESS FACTS, each with a date</li>
+<li>List PATTERNS/TONE (how we speak, how we sign off, how we treat the customer)</li>
+<li>List DECISIONS already made (what we won’t reopen)</li>
+<li>List 2 recent CORRECTIONS and the memory line each one generates</li>
+<li>Mark what should NOT become memory (temporary data)</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">Case: tattoo studio.
+
+FACTS (dated): Studio in São Paulo, Pinheiros neighborhood (Jun/26). Specialties: fineline and blackwork (Jun/26). Deposit to book: 40% of the price (updated Jun/26). Booking only through Instagram (Jun/26).
+
+PATTERNS/TONE: Casual tone, addresses people as 'you.' Always asks for a visual reference before providing a quote. Signs responses with 'Equipe [Estúdio]'.
+
+DECISIONS: We don't do cover-ups (refer to a partner). We don't provide quotes by phone, only from images. We don't do same-day appointments — at least 3 days' notice required.
+
+RECENT CORRECTIONS: (1) 'The AI said the deposit was 30%' -&gt; line: 'The correct deposit has been 40% since Jun/26.' (2) 'The AI provided a quote without seeing a reference' -&gt; line: 'Never give a price before the customer sends a visual reference.'
+
+NOT memory (temporary information): 'the July calendar is full' (it changes every week — that's information for the day, not stable memory).</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: Use the two-hit rule: if you’ve explained the same thing twice, it belongs in memory the third time. Repeated fixes are the best candidates for a line.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">6. Build the validation checklist</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Derive validation criteria directly from the objective and catch the error hidden by something that “looks good.”</p>
+<p class="text-sm text-neutral-300 mb-4">Take the objective-result you wrote in exercise 3 (or the one for your case). Build a validation checklist with 4-6 items that EVERY output must pass before it becomes a deliverable. At least one item must check a factual claim. Then write an example of an output that LOOKS good but fails one item.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Reread your objective and what it's 'measured by'</li>
+<li>Turn each part of “measured by” into a checklist item (yes/no)</li>
+<li>Add 1 mandatory fact check (price, timeline, promise)</li>
+<li>Write an output that looks great but fails 1 item</li>
+<li>Point out which item caught the error</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">Objective: “customer gets the correct information they came for, in 1 response, in the brand’s tone, without making anything up.”
+
+Validation checklist (every response must pass):
+[ ] 1. Did it actually answer the customer’s question?
+[ ] 2. Did it resolve the issue in 1 message (without pushing them to “please wait”)?
+[ ] 3. Is it in the brand’s tone (welcoming, addresses the customer as “you,” no jargon)?
+[ ] 4. FACT CHECK: Does every price, delivery time, and policy mentioned match the catalog and official source?
+[ ] 5. Did it avoid promising anything outside the policy (delivery outside the service area, unauthorized discount)?
+[ ] 6. If it was out of scope, did it use the escalation path instead of improvising?
+
+An answer that SEEMS good but fails: “Hi! Great choice, this coffee is wonderful 😍 It costs R$39, and I’ll deliver it tomorrow for sure!” — great tone, friendly, quick resolution. FAILS item 4: the actual price is R$49 (not R$39), and the delivery time is 2 business days (not “tomorrow”). The checklist caught exactly the factual error that the friendly appearance concealed.</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: The most valuable checklist item is the one that catches the invisible error—the incorrect factual claim that looks right. Never leave it out.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">7. Fill out the complete Intent Architecture Canvas</h3>
+<p class="text-sm text-amber-400 mb-2"><strong>Objective:</strong> Bring the 5 pillars together on one coherent page for the student’s real intention—the deliverable for the day.</p>
+<p class="text-sm text-neutral-300 mb-4">Use the day’s Template (Intention Architecture Canvas) and fill in the 5 pillars for YOUR real intention, reusing what you produced in exercises 1 through 6. At the end, run the coherence test and the substitute test.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Fill these in order: Intention → Objective → Context → Rules → Memory → Validation</li>
+<li>Reuse your answers from the previous exercises</li>
+<li>Run the consistency test: does each field make sense with the others?</li>
+<li>Run the substitute test: could someone operate using only the Canvas?</li>
+<li>Note which field is still weak so you can review it later</li>
+</ol>
+<details class="mt-4 group"><summary class="cursor-pointer text-amber-400 font-medium">See the sample answer key</summary><div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">CANVAS — Plant Shop DM Assistant
+
+INTENT: Reliably answer customer questions in the Instagram DMs without the owner having to be online all the time.
+
+OBJECTIVE: Success means the customer gets the correct information they came for (care, price, delivery) in no more than 1 reply, in the brand’s tone, without making anything up — measured by the validation checklist — because every question that isn’t resolved right away can mean a lost sale.
+
+CONTEXT: Houseplant shop, beginner audience. Welcoming tone, no jargon. 20 plants in the catalog, each with care level and official tip. Delivery only in São Paulo city, 3 business days. We don’t do landscaping.
+
+RULES: Prohibitions — never confirm delivery outside São Paulo city; never improvise care advice beyond the product sheet; never authorize a refund or exchange. Requirements — always confirm the city before discussing delivery; always confirm the plant before giving the price. Escalation path — complaint/damage/refund: log it and forward it to a human.
+
+MEMORY: Dated facts (catalog, prices, delivery area — Jun/26). Patterns (tone, sign-off, address customers informally). Decisions (we don’t do landscaping, we don’t serve customers outside São Paulo). Corrections (capture corrected timing/prices).
+
+VALIDATION (checklist for each reply): Did it answer the question? 1 message? Right tone? Do price/timing match the knowledge base? Nothing promised outside the policy? Escalation path used when out of scope?
+
+Coherence test: validation checks the objective (yes); rules guard against real risks (yes); context has no clutter (yes); memory captures what repeats (yes). Substitute test: could someone with only this Canvas handle basic customer service — APPROVED.</div></details>
+<p class="text-sm text-neutral-400 mt-3">💡 Tip: If any field got too long, that’s not a virtue—it means you haven’t filtered enough. Go back to the objective and cut everything it doesn’t call for. The Canvas must fit on one sheet.</p>
+</div>
+</section>
+<!-- E2) TEMPLATE / CANVAS DO DIA -->
+<section class="mb-14">
+<div class="bg-gradient-to-br from-amber-900/20 to-dark-800 rounded-xl border border-amber-500/30 p-6 sm:p-8">
+<h2 class="text-2xl font-bold mb-2 flex items-center"><span class="mr-2">🧩</span>Intent Architecture Canvas (the 5 Pillars on one sheet)</h2>
+<p class="text-neutral-300 mb-6 inema-prose">A single page that brings together the 5 pillars for a real intention. Fill it out in this order: Intention → Objective → Context → Rules → Memory → Validation. The example for each field comes from a small business customer service assistant. It’s intentionally limited to one page: if it goes beyond that, either the intention is too big (split it in two) or it needs filtering (go back to the objective).</p>
+<div class="space-y-3">
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Intention (1 honest sentence, even if vague)</div><div class="text-neutral-300 text-sm">Example: Reliably answer my store’s customers’ questions on WhatsApp without my having to be online all the time.</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Objective (it worked when ___, measured by ___, because ___)</div><div class="text-neutral-300 text-sm">Example: Success means the customer gets the correct information they came for (product, price, timeline, exchange) in up to 1 response, in the brand’s tone, with nothing made up; measured by the validation checklist; because every question left unanswered becomes an abandoned cart.</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Context (only what serves the objective: business, customer, deliverable)</div><div class="text-neutral-300 text-sm">Example: Vegan cosmetics store, audience ages 25-40, welcoming and informal tone, addresses customers as ‘you’. Catalog of 30 products with prices and descriptions. Exchange policy: 7 days. Delivery: 3 business days, free shipping over R$150. We do NOT offer: subscriptions, in-store pickup.</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Rules (prohibitions / obligations / escape routes)</div><div class="text-neutral-300 text-sm">Example: Prohibitions: never make up a price or timeline; never promise anything outside the policy; never repeat sensitive data (CPF, card). Requirements: always confirm the product before giving the price; maintain the brand’s tone. Escape route: serious complaint or request outside the catalog → hand off to a human, don’t improvise.</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Memory (dated facts / patterns / decisions / corrections)</div><div class="text-neutral-300 text-sm">Example: Facts: catalog and prices (updated Jun/26), 7-day exchanges, free shipping &gt;R$150. Defaults: welcoming tone, signs ‘[Store] Team’. Decisions: we don’t provide phone support; standard response to discount requests is ‘we don’t offer discounts, but shipping is free on orders over R$150’. Corrections: capture any information that had to be corrected 2x.</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Validation (checklist every output must pass)</div><div class="text-neutral-300 text-sm">Example: [ ] Did it answer the question? [ ] Did it resolve the issue in 1 message? [ ] Brand tone? [ ] FACT CHECK: do the price/timeline/policy match the official source? [ ] Did it avoid promises outside the policy? [ ] Did it use the escape route if the request was out of scope?</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Coherence test + substitute test (fill out last)</div><div class="text-neutral-300 text-sm">Example: Consistency: Does the validation check the objective? (yes) Do the rules cover the pre-mortem risks? (yes) Does the context contain clutter? (no) Does the memory capture recurring information? (yes). Replacement test: Could someone with only this Canvas handle basic customer service without asking me anything? (yes — approved).</div></div>
+</div>
+</div>
+</section>
+<!-- E3) CHECAGEM LEVE -->
+<section class="mb-14">
+<div class="inema-check bg-dark-800 border border-dark-600 rounded-xl p-6" data-inema-check="modulo-1-2#q1">
+<p class="font-medium mb-4">You paste the entire company manual, three PDFs, and six months of history into the chat, but the AI’s answers get worse and more confusing. Based on the 5 pillars, what’s the most likely diagnosis?</p>
+<div class="inema-check-options space-y-2">
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="0" type="button">Missing context — you need to add even more information</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="1" type="button">Context without an objective became excess — the objective that filters what’s relevant is missing</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="2" type="button">It's a memory problem—the AI forgot the PDFs</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="3" type="button">It’s a validation problem—the checklist is wrong</button>
+</div>
+<div aria-live="polite" class="mt-4 text-sm" data-inema-check-feedback="" role="status"></div>
+</div>
+</section>
+<!-- E4) FACILITADOR -->
+<section class="mb-14">
+<details class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<summary class="cursor-pointer font-semibold text-neutral-200">🎓 To make things easier live (in-person mode)</summary>
+<div class="mt-4 space-y-3 text-sm text-neutral-300">
+<p><strong class="text-amber-400">Total time:</strong> ~120 min.</p>
+<p><strong class="text-amber-400">Activity:</strong> Opening (10 min): revisit the hook from Day 1 and state the rule for today — “a prompt isn’t enough; today we architect.” Present the Intention→Context→Process→Result chain on the board. Five-pillar round (50 min, ~10 min each): for each pillar, give a 4-minute mini-lesson followed by a 6-minute individual mini-exercise based on each participant’s case. Use the anchor case (customer service assistant) on the board and ask each student to adapt it to their own case. Canvas creation (35 min): in pairs, each person fills out the Canvas for their own case; the pair applies the coherence test to each other’s Canvas (peer review — the partner points out gaps). Group discussion of gaps (15 min): 3–4 pairs share the hardest pillar and the gap their partner found. Wrap-up (10 min): do the substitute test aloud and introduce Day 3 (turning the Canvas into a system that runs and validates itself).</p>
+<p><strong class="text-amber-400">Materials:</strong> Printed Intent Architecture Canvas (1 per student, with the assistant example column beside it). Pen. Board/flip chart with the chain and the 5 pillars + the 4 collapses visible at all times. Two colors of sticky notes (one for 'rule,' the other for 'correction/memory'). Optional: cards with premortem 'disasters' for the rule-setting activity.</p>
+<p><strong class="text-amber-400">Discussion questions:</strong></p>
+<ul class="list-disc list-inside space-y-1.5">
+<li>Which of the 5 pillars had you been ignoring the most until now—and what real mistake has that already caused you?</li>
+<li>In your case, what information did you think was 'important context' and realize was just clutter?</li>
+<li>What would be the worst disaster if your system ran 500 times on its own? What rule prevents that?</li>
+<li>Can you validate your result without checking it by eye every time? If not, was your objective observable?</li>
+<li>What do you re-explain every time in your system that should become memory?</li>
+<li>Did it pass the substitute test? Which field is still only in your head and not on paper?</li>
+</ul>
+</div>
+</details>
+</section>
+<!-- E5) RESUMO DO DIA -->
+<section class="mb-8">
+<div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-xl border border-amber-500/30 p-8">
+<h2 class="text-2xl font-bold mb-6 flex items-center"><span class="mr-3">✅</span>Day 2 Summary</h2>
+<ul class="space-y-3 mb-7">
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>The Intention → Context → Process → Outcome chain is the bridge from a vague idea to an operational model: each link supports the next, and skipping one causes the failures of superficial use.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>Each of the 5 pillars has one failure mode: Context without a goal = overload; Missing goal = noise/no direction; Missing rule = risk; Missing memory = starting from scratch; Missing validation = an illusion of productivity.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>The objective is the pillar that filters the others: it defines what counts as relevant context, justifies the rules, and enables validation. Write it as a verifiable target outcome (“it worked when / measured by / because”), not as an activity.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>Rules protect against AI that is confident but wrong (prohibitions, obligations, escape routes), and they matter more as you automate more—scale multiplies successes AND errors.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>Memory keeps the system from starting over from scratch and helps it improve through corrections; always validate against criteria written in advance, because AI is great at SEEMING right.</span></li>
+<li class="flex items-start gap-3 text-neutral-200"><span class="text-amber-400 mt-0.5 flex-shrink-0">✓</span><span>The Canvas brings the five pillars together on one coherent page for your real intent — and by filling it out, your focus has already shifted from AI to the SYSTEM that guides AI. That's the leap of Intent Architecture.</span></li>
+</ul>
+<div class="bg-dark-900/50 rounded-lg border border-dark-600 p-5 mb-7">
+<p class="text-sm text-neutral-300"><strong class="text-amber-400">Next:</strong> Tomorrow (Day 3), your Canvas moves off the page: we’ll turn the 5 pillars into a SYSTEM that runs in cycles, validates itself, and delivers consistently — with the System Worksheet and operational validation checklist. You’ll stop describing the system and start putting it to work.</p>
+</div>
+<div class="flex flex-col sm:flex-row justify-start gap-4">
+<a class="text-center px-6 py-3 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors" href="dia-1.html">← Day 1</a>
+<a class="text-center px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors" href="dia-3.html">Day 3 — The System →</a>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<footer class="border-t border-dark-600 py-8 mt-8">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+<p>Intent Architecture — an immersion <a class="text-sky-400 hover:text-sky-300" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a> · 2026</p>
+</div>
+</footer>
+<!-- SCRIPTS: nucleo v1 -->
+<script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+<!-- Camada de aprendizagem v2 -->
+<script src="../assets/learn.js"></script>
+<script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+    if (window.INEMA && INEMA.registerCheck) INEMA.registerCheck('modulo-1-2#q1', {
+      answer: 1,
+      explain: {
+        0: "Errado. O problema não é falta de informação — é o contrário. Adicionar mais só aumenta o ruído. O sintoma 'piorou com mais contexto' indica excesso, não escassez.",
+        1: "Correto. Este é o limite do Pilar 1: contexto sem objetivo vira excesso de informação. Sem um objetivo que filtre o que é relevante, a IA tem que adivinhar o que importa naquele monte de dado — e adivinha mal. A solução é definir o objetivo e cortar tudo que ele não pede.",
+        2: "Errado. Memória é sobre o que persiste ENTRE execuções para não recomeçar do zero. O problema aqui é dentro de uma execução: informação demais sem filtro. Não é esquecimento, é entulho.",
+        3: "Errado. Validação verifica se o resultado está certo depois de pronto. O problema aqui é na entrada (contexto sem filtro), não na conferência da saída. O checklist não resolve excesso de contexto."
+      }
+    });
+  </script>
+</body>
+</html>

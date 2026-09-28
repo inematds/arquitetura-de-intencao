@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="arquitetura-intencao" name="inema-course"/>
+<title>Día 4 — El Giro: modelos que operan con intención | Arquitectura de Intención · INEMA.CLUB</title>
+<!-- 1) ANTI-FOUC: bloqueante, ANTES do Tailwind. Aplica .dark + data-theme + prefs de leitura antes do 1o paint. Default dark/amber no erro. -->
+<script>
+  (function () {
+    try {
+      var html = document.documentElement;
+      var DEF = { theme: 'inema-dark', font: 'inter', fontScale: 100, lineWidth: 68, leading: 1.7, accent: 'amber' };
+      function clone(o){var r={};for(var x in o)r[x]=o[x];return r;}
+      var p = clone(DEF);
+      try {
+        var raw = localStorage.getItem('inema.prefs');
+        if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') { for (var k in DEF) if (parsed[k] != null) p[k] = parsed[k]; } }
+        else { var legacy = localStorage.getItem('theme'); if (legacy === 'light') p.theme = 'claro'; else if (legacy === 'dark') p.theme = 'inema-dark'; }
+      } catch (e) { p = clone(DEF); }
+      var THEMES = {
+        'inema-dark': { dark: true,  attr: null,        cs: 'dark'  },
+        'claro':      { dark: false, attr: null,        cs: 'light' },
+        'sepia':      { dark: false, attr: 'sepia',     cs: 'light' },
+        'foco':       { dark: null,  attr: 'foco',      cs: null    },
+        'contraste':  { dark: true,  attr: 'contraste', cs: 'dark'  }
+      };
+      var t = THEMES[p.theme] || THEMES['inema-dark'];
+      if (t.dark === true) html.classList.add('dark'); else if (t.dark === false) html.classList.remove('dark');
+      if (t.attr) html.setAttribute('data-theme', t.attr); else html.removeAttribute('data-theme');
+      html.style.colorScheme = (t.cs ? t.cs : (html.classList.contains('dark') ? 'dark' : 'light'));
+      html.setAttribute('data-font', p.font || 'inter');
+      html.setAttribute('data-accent', p.accent || 'amber');
+      html.setAttribute('data-line-width', String(p.lineWidth || 68));
+      var s = html.style; var scale = (+p.fontScale || 100);
+      s.setProperty('--inema-font-scale', (scale / 100).toString());
+      s.setProperty('font-size', scale + '%');
+      s.setProperty('--measure', (+p.lineWidth || 68) + 'ch');
+      s.setProperty('--lh-body', (+p.leading || 1.7).toString());
+      var fam = p.font === 'system' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        : (p.font === 'leitura' ? '"Atkinson Hyperlegible", "Inter", system-ui, sans-serif' : '"Inter", system-ui, sans-serif');
+      s.setProperty('--font-body', fam);
+      var ACC = { emerald:[152,76,45], blue:[217,91,60], purple:[258,90,66], amber:[38,92,50], teal:[174,72,41], rose:[350,89,60] };
+      var a = ACC[p.accent] || ACC.amber;
+      s.setProperty('--accent-h', a[0] + ''); s.setProperty('--accent-s', a[1] + '%'); s.setProperty('--accent-l', a[2] + '%');
+      s.setProperty('--accent', 'hsl(' + a[0] + ' ' + a[1] + '% ' + a[2] + '%)');
+    } catch (err) { try { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; } catch (e) {} }
+  })();
+  </script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#FACC15', dark: { 900: '#111827', 800: '#1f2937', 700: '#374151', 600: '#4b5563' } } } }
+    }
+  </script>
+<link href="../assets/learn.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Manifesto do curso (OBRIGATORIO, identico em TODA pagina) -->
+<script data-inema-manifest="" type="application/json">
+  {
+    "course": "arquitetura-intencao",
+    "tracks": [
+      { "n": "1", "title": "Arquitetura de Intenção", "modules": [
+        { "id": "1-1", "title": "Dia 1 — A Pirâmide", "topics": 6, "href": "dia-1.html" },
+        { "id": "1-2", "title": "Dia 2 — Os 5 Pilares", "topics": 7, "href": "dia-2.html" },
+        { "id": "1-3", "title": "Dia 3 — O Sistema", "topics": 6, "href": "dia-3.html" },
+        { "id": "1-4", "title": "Dia 4 — A Virada", "topics": 6, "href": "dia-4.html" }
+      ]}
+    ]
+  }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .dark body { background-color: #111827; }
+    .topic-explanation { display: none; }
+    .topic-explanation.active { display: block; }
+    html { scroll-behavior: smooth; }
+    [id^="topico-"], [data-inema-topic], main [id] { scroll-margin-top: 84px; }
+
+    /* Light mode — Parte 1: base */
+    html:not(.dark) body { background-color: #f8fafc; }
+    html:not(.dark) .bg-dark-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-dark-800 { background-color: #f9fafb; }
+    html:not(.dark) .bg-dark-700 { background-color: #f3f4f6; }
+    html:not(.dark) .bg-dark-600 { background-color: #e5e7eb; }
+    html:not(.dark) .text-neutral-100 { color: #111827; }
+    html:not(.dark) .text-neutral-300 { color: #4b5563; }
+    html:not(.dark) .text-neutral-400 { color: #6b7280; }
+    html:not(.dark) .text-neutral-500 { color: #9ca3af; }
+    html:not(.dark) .border-dark-600 { border-color: #d1d5db; }
+    html:not(.dark) .border-dark-700 { border-color: #e5e7eb; }
+
+    /* Light mode — Parte 2: acento da trilha (Amber T4 → amber-800 #92400e) */
+    html:not(.dark) .text-amber-400 { color: #92400e; }
+    html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217,119,6,0.12); }
+    html:not(.dark) .bg-amber-500\/10 { background-color: rgba(217,119,6,0.08); }
+    html:not(.dark) .border-amber-500\/30 { border-color: rgba(217,119,6,0.25); }
+    html:not(.dark) .hover\:bg-amber-500\/30:hover { background-color: rgba(217,119,6,0.18); }
+    html:not(.dark) .hover\:text-amber-400:hover { color: #92400e; }
+    html:not(.dark) .group:hover .group-hover\:text-amber-400 { color: #92400e; }
+
+    /* Light mode — Parte 3: remove gradientes + cores especiais */
+    html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+    html:not(.dark) .text-primary { color: #a16207; }
+    html:not(.dark) .bg-primary\/10 { background-color: rgba(161, 98, 7, 0.08); }
+    html:not(.dark) .border-primary\/30 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .border-primary\/40 { border-color: rgba(161, 98, 7, 0.25); }
+    html:not(.dark) .text-sky-400 { color: #0369a1; }
+    html:not(.dark) .text-yellow-400 { color: #a16207; }
+    html:not(.dark) .hover\:text-sky-300:hover { color: #0284c7; }
+    html:not(.dark) .hover\:text-yellow-300:hover { color: #854d0e; }
+
+    /* Light mode — Parte 4: navbar */
+    html:not(.dark) .bg-dark-900\/95 { background-color: rgba(255, 255, 255, 0.95); }
+
+    /* Dark mode — bordas e divisores mais suaves */
+    .dark .border-dark-600 { border-color: #374151; }
+    .dark .divide-dark-600 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+
+    /* SVG diagramas — suaviza no tema claro */
+    html:not(.dark) svg[role="img"] { filter: saturate(0.82) brightness(0.96); }
+
+    /* Pulso dos diagramas (so com motion permitido) */
+    @keyframes wf-pulse { 0%,100% { opacity:.55 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: no-preference) {
+      .wf-a { animation: wf-pulse 2.6s ease-in-out infinite; }
+      .wf-a:nth-child(2){animation-delay:.25s} .wf-a:nth-child(3){animation-delay:.5s}
+      .wf-a:nth-child(4){animation-delay:.75s}
+    }
+  </style>
+<link href="https://inematds.github.io/arquitetura-de-intencao/dia-4.html" hreflang="pt-BR" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/en/dia-4.html" hreflang="en" rel="alternate"/><link href="https://inematds.github.io/arquitetura-de-intencao/es/dia-4.html" hreflang="es" rel="alternate"/></head>
+<body class="bg-dark-900 text-neutral-100 min-h-screen"><div class="inema-lang" style="position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:2px;padding:4px;border-radius:10px;background:rgba(12,12,16,.82);border:1px solid rgba(226,162,59,.45);font:600 12px/1 Sora,Inter,system-ui,sans-serif;backdrop-filter:blur(8px)" translate="no"><a href="../dia-4.html" hreflang="pt-BR" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">PT</a><a href="../en/dia-4.html" hreflang="en" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#e9e9ee">EN</a><a href="./dia-4.html" hreflang="es" style="padding:6px 8px;border-radius:7px;text-decoration:none;color:#1a1206;background:#E2A23B">ES</a></div>
+<a class="skip" href="#conteudo">Pasar al contenido</a>
+<!-- NAVIGATION (identico em todas as paginas) -->
+<nav class="sticky top-0 z-50 bg-dark-900/95 backdrop-blur-sm border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center h-14">
+<div class="flex items-center space-x-3">
+<a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300" href="index.html">
+<span class="text-2xl">🎯</span>
+<span class="font-bold text-lg hidden sm:inline">Arquitectura de Intención</span>
+</a>
+<span class="text-neutral-600 hidden sm:inline">|</span>
+<a class="text-sky-400 hover:text-sky-300 text-sm font-medium" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a>
+</div>
+<div class="flex items-center space-x-1 sm:space-x-2">
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="index.html">Inicio</a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-1.html"><span class="sm:hidden">D1</span><span class="hidden sm:inline">Día 1</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-2.html"><span class="sm:hidden">D2</span><span class="hidden sm:inline">Día 2</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" href="dia-3.html"><span class="sm:hidden">D3</span><span class="hidden sm:inline">Día 3</span></a>
+<a class="px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-400 bg-amber-500/10" href="dia-4.html"><span class="sm:hidden">D4</span><span class="hidden sm:inline">Día 4</span></a>
+<button class="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-journey-open="" title="Mi recorrido" type="button">
+<span aria-hidden="true">◷</span><span class="hidden sm:inline">Recorrido</span>
+<span aria-hidden="true" class="inema-journey-badge hidden" data-count="0" data-inema-journey-badge=""></span>
+</button>
+<button aria-expanded="false" class="inema-appearance-trigger inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-dark-700 transition-colors text-sm" data-inema-appearance-toggle="[data-inema-appearance]" title="Apariencia y lectura" type="button">
+<span aria-hidden="true">◑</span><span class="hidden sm:inline">Apariencia</span>
+</button>
+<button aria-label="Alternar claro/oscuro" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors" id="theme-toggle" title="Alternar claro/oscuro">
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-dark-icon" viewbox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+<svg class="hidden w-5 h-5 text-neutral-300" fill="currentColor" id="theme-toggle-light-icon" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Painel de aparencia (escondido por padrao; data-open via JS) -->
+<div aria-label="Apariencia y lectura" class="inema-appearance-pop" data-inema-appearance="" role="dialog">
+<div class="inema-segment"><span class="inema-segment-label">Tema</span>
+<button data-inema-set-theme="inema-dark">Oscuro</button>
+<button data-inema-set-theme="claro">Claro</button>
+<button data-inema-set-theme="sepia">Sepia</button>
+<button data-inema-set-theme="foco">Enfoque</button>
+<button data-inema-set-theme="contraste">Alto contraste</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Fuente</span>
+<button data-inema-set-font="inter">Inter</button>
+<button data-inema-set-font="system">Sistema</button>
+<button data-inema-set-font="leitura">Lectura</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Tamaño</span>
+<button data-inema-set-fontscale="100">A</button>
+<button data-inema-set-fontscale="112">A+</button>
+<button data-inema-set-fontscale="125">A++</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Ancho</span>
+<button data-inema-set-linewidth="60">Estrecho</button>
+<button data-inema-set-linewidth="68">Medio</button>
+<button data-inema-set-linewidth="75">Largo</button>
+</div>
+<div class="inema-segment"><span class="inema-segment-label">Entrelinea</span>
+<button data-inema-set-leading="1.45">Compacto</button>
+<button data-inema-set-leading="1.7">Cómodo</button>
+</div>
+<div aria-label="Color de acento" class="inema-accent-grid">
+<button data-inema-set-accent="emerald" title="Esmeralda"></button>
+<button data-inema-set-accent="blue" title="Azul"></button>
+<button data-inema-set-accent="purple" title="Morado"></button>
+<button data-inema-set-accent="amber" title="Ámbar"></button>
+<button data-inema-set-accent="teal" title="Teal"></button>
+<button data-inema-set-accent="rose" title="Rosa"></button>
+</div>
+</div>
+</nav>
+<main id="conteudo">
+<!-- BREADCRUMB -->
+<nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2"><div class="flex items-center gap-2 text-sm text-neutral-400"><a class="hover:text-amber-400" href="index.html">Inicio</a><span>/</span><span class="text-amber-400">Día 4</span></div></nav>
+<!-- HEADER -->
+<header class="bg-gradient-to-br from-amber-900/30 via-dark-900 to-dark-900 border-b border-dark-600">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full mb-4">DÍA 4 · ACTUALIZACIÓN SEP/2026</span>
+<h1 class="text-3xl sm:text-4xl font-bold mb-3">🧭 El Cambio: modelos que operan con intención</h1>
+<p class="text-lg text-neutral-400 max-w-3xl inema-prose">Qué cambió con Claude Fable 5.1 y GPT-6 Astra, y cómo migrar tu sistema de «prompt con pasos» a «intención con límites, listo y verificación».</p>
+<p class="text-base text-neutral-300 max-w-3xl mt-4 inema-prose">En la primera semana de septiembre de 2026, las dos principales empresas de IA lanzaron una nueva generación: Anthropic publicó el <strong class="text-amber-400">Claude Fable 5.1</strong> (1/sep) y OpenAI lo <strong class="text-amber-400">GPT-6 Astra</strong> (vista previa el 3/sep, público el 4/sep). Ambos tienen algo en común que cambia nuestro curso: siguen instrucciones tan bien que <strong class="text-amber-400">los prompts llenos de pasos empezaron a estorbar</strong>. Los propios fabricantes dicen que las instrucciones escritas para modelos antiguos «son demasiado prescriptivas y pueden degradar la calidad». La pirámide del día 1 sigue en pie, pero el modelo subió un escalón por su cuenta: ya se ocupa del «cómo». A ti te queda lo que siempre fue el núcleo de la Arquitectura de Intención: qué, hasta dónde y cómo saber que está listo. Hoy aprenderás qué cambió, qué borrar, qué escribir en su lugar y migrarás la Ficha del Sistema del día 3 a la Ficha de Intención v2.</p>
+<div class="mt-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Ubicar qué cambió en sept/2026 (Fable 5.1 y GPT-6 Astra) y por qué esto afecta a quienes escriben sistemas, no solo a quienes escriben código.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Aplicar ingeniería por sustracción: auditar prompts, reglas y skills, y borrar lo que solo existía para sostener un modelo débil.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Cambiar listas de pasos por límites de autoridad: qué decide el modelo por su cuenta y las 3 situaciones en las que se detiene.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Escribir la definición de listo y exigir una verificación con evidencia antes de que el modelo declare que terminó.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Usar el esfuerzo, la memoria en un archivo y las actualizaciones de progreso como controles para el trabajo prolongado.</span></div>
+<div class="flex items-start gap-2 text-sm text-neutral-300"><span class="text-amber-400 mt-0.5">✓</span><span>Migrar tu Ficha del Sistema (día 3) a la Ficha de Intención v2 y ejecutar el mismo caso real en ambos formatos.</span></div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-8 max-w-2xl">
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">6</div><div class="text-xs text-neutral-400">Temas</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">~100</div><div class="text-xs text-neutral-400">Minutos</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Aplicación</div><div class="text-xs text-neutral-400">Nivel</div></div>
+<div class="bg-dark-800/50 rounded-lg p-3 border border-dark-600"><div class="text-xl font-bold text-amber-400">Migración</div><div class="text-xs text-neutral-400">Tipo</div></div>
+</div>
+</div>
+</header>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+<!-- TOC -->
+<nav aria-label="Índice del día" class="hidden lg:block sticky top-24 self-start text-sm" data-inema-toc="">
+<p class="text-neutral-400 mb-2">Sección <span data-inema-section-counter=""></span></p>
+<ol class="space-y-1">
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-1">1. Qué cambió en sep/2026</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-2">2. Ingeniería por sustracción</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-3">3. Límites, no pasos</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-4">4. Listo y verificación</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-5">5. Esfuerzo, memoria y trabajo prolongado</a></li>
+<li><a class="inema-toc-link block py-1 text-neutral-400 hover:text-amber-400" href="#topico-6">6. Proyecto: Ficha v2</a></li>
+</ol>
+</nav>
+<!-- CONTEUDO -->
+<div>
+<div aria-label="Progreso del día" aria-valuemax="100" aria-valuemin="0" class="mb-10" data-inema-meter="modulo:1-4" role="progressbar">
+<div class="flex justify-between text-sm mb-1.5">
+<span class="inema-meter-label" data-inema-meter-frac="">0 de 6</span>
+<span class="text-amber-400 font-semibold" data-inema-meter-pct="">0%</span>
+</div>
+<div class="inema-bar"><div class="inema-bar__fill" data-inema-meter-fill=""></div></div>
+</div>
+<article data-inema-module="1-4" data-inema-track="1">
+<!-- ====================== TOPICO 1 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-1" id="topico-1">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">1</span>
+<h2 class="text-2xl font-bold">🗓️ Qué cambió en septiembre de 2026</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t1-p1">Durante tres años, la receta fue la misma: el modelo se equivoca y tú escribes una regla más. "Siempre ejecuta las pruebas". "Lee la documentación antes de cambiar cualquier cosa". "Pide permiso en cada paso". Cada línea surgió de una falla real de un modelo más débil. En septiembre de 2026, esa receta dio un giro: los dos modelos nuevos siguen las instrucciones tan bien que <strong class="text-amber-400">obedecen las muletas</strong> — y las muletas empezaron a costar calidad.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p2"><strong class="text-amber-400">Claude Fable 5.1</strong> (Anthropic, 1/sep/2026). El mismo modelo que Mythos 5.1, con salvaguardas diferentes. Fue creado para trabajo largo y autónomo: sostiene tareas de horas o días, lleva sus propios registros, vuelve a priorizar y retoma desde donde quedó. La guía oficial de prompting de Fable 5 dice textualmente que las skills creadas para modelos anteriores “son demasiado prescriptivas y pueden degradar la calidad del resultado”. La versión 5.1 quedó ~25% más barata en el uso típico y hasta 45% en trabajo agéntico; con un nivel de esfuerzo medio ofrece lo que Fable 5 ofrecía con un nivel alto.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p3"><strong class="text-amber-400">GPT-6 Astra</strong> (OpenAI, vista previa el 3/sep, disponible al público el 4/sep/2026). Grandes avances en uso de la computadora, código, ciencia y contexto largo. Un comportamiento nuevo que sorprende a todos: él <strong class="text-amber-400">pregunta más</strong> antes de actuar y lo formatee todo en listas. Un prompt que solo describe la tarea suele volver con una pregunta y un resumen en vez del trabajo hecho. Según las orientaciones de la propia OpenAI (citadas por las guías que leímos), el antídoto es decirle al modelo que <em>inferir la intención a partir del contexto y persistir hasta completar el objetivo</em> — y dejar claro que reconocer que <em>podría</em> hacer no es lo mismo que haber hecho.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p4">Observa el patrón. Los dos errores son opuestos (uno hace más de lo pedido y el otro se detiene demasiado pronto), pero la causa es la misma: <strong class="text-amber-400">el modelo está obedeciendo lo que escribiste, no lo que querías</strong>. Si tu texto todavía describe pasos, el modelo ejecuta pasos. Si describe límites estrictos, se detiene en el límite. Lo que falta no son más instrucciones: es expresar la intención de una forma que el modelo pueda completar por su cuenta.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p5">El 5/set/2026, el equipo de experiencia para desarrolladores de Codex, en OpenAI, publicó una guía en la que recomendaba a sus propios usuarios "dejar de sobreingenierizar los prompts": las skills, los archivos de instrucciones y las solicitudes de tareas acumularon "grasa: el apoyo que un modelo débil necesitaba y uno fuerte no necesita". Por su parte, Anthropic recomienda lo mismo con otras palabras: revisa las instrucciones antiguas y <strong class="text-amber-400">elimina lo que el comportamiento predeterminado ya hace mejor</strong>.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p6">Para este curso, la noticia es buena. Los 5 pilares del día 2 no desaparecen: ellos <strong class="text-amber-400">cambian de forma</strong>. El contexto se convierte en <em>fuente de verdad</em> (qué es autoritativo, no todo lo que sabes). Los objetivos se convierten en <em>resultado + definición de listo</em>. Las reglas se convierten en <em>límites de autoridad</em> (qué decide por su cuenta, dónde se detiene). La memoria se convierte en <em>archivo de lecciones</em> que el modelo lee y escribe. La validación se convierte en <em>verificación con evidencia</em> antes de declarar que terminó. Eso es lo que vamos a crear hoy.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t1-p7">Una advertencia honesta: todo esto tiene fecha. Los dos modelos llevan menos de una semana en uso mientras escribimos, y su comportamiento aún se está midiendo. Lo que no cambia es el método: <strong class="text-amber-400">con cada cambio de generación, vuelves a auditar lo que escribiste</strong>. Este día enseña el método con los hechos de sep/2026 como caso.</p>
+</div>
+<!-- SVG A: antes/depois -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="Antes: prompt centrado en pasos, con muchas reglas apiladas y un resultado frágil. Después: intención con resultado, límites y definición de terminado, y el modelo se encarga del cómo." class="w-full h-auto" role="img" viewbox="0 0 1000 300">
+<defs>
+<lineargradient id="d4a-grad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbbf24"></stop><stop offset="1" stop-color="#f59e0b"></stop></lineargradient>
+<pattern height="32" id="d4a-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4a-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4a-grid)" height="300" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif">
+<text fill="#f87171" font-size="14" font-weight="700" text-anchor="middle" x="215" y="34">ANTES · prompt con pasos (hasta 2025)</text>
+<g fill="#fecaca" font-size="11">
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="50"></rect><text text-anchor="middle" x="215" y="66">1. Lee toda la documentación antes de hacer cambios</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="80"></rect><text text-anchor="middle" x="215" y="96">2. Ejecuta todas las pruebas después de cada paso</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="110"></rect><text text-anchor="middle" x="215" y="126">3. Pide permiso antes de continuar</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="140"></rect><text text-anchor="middle" x="215" y="156">4. Explica tu razonamiento en la respuesta</text>
+<rect fill="#2a1414" height="24" rx="6" stroke="#ef4444" stroke-width="1.5" width="310" x="60" y="170"></rect><text text-anchor="middle" x="215" y="186">5. Nunca uses listas · 6. Usa siempre listas…</text>
+</g>
+<text fill="#fca5a5" font-size="11" text-anchor="middle" x="215" y="228">un modelo potente obedece cada muleta →</text>
+<text fill="#fca5a5" font-size="11" text-anchor="middle" x="215" y="246">se detiene pronto, es demasiado ordenado o pregunta en vez de actuar</text>
+<line marker-end="url(#d4a-ah)" stroke="#fbbf24" stroke-width="2.5" x1="400" x2="470" y1="150" y2="150"></line>
+<text fill="#fbbf24" font-size="11" font-weight="600" text-anchor="middle" x="435" y="138">set/2026</text>
+<text fill="#fbbf24" font-size="14" font-weight="700" text-anchor="middle" x="740" y="34">DESPUÉS · intención con límites</text>
+<rect fill="url(#d4a-grad)" height="180" rx="16" stroke="#f59e0b" stroke-width="2.5" width="440" x="520" y="50"></rect>
+<g fill="#231400" font-size="12" font-weight="700">
+<text x="545" y="80">RESULTADO</text><text font-weight="400" x="655" y="80">lo que queda listo, para quién</text>
+<text x="545" y="106">FUENTE DE VERDAD</text><text font-weight="400" x="700" y="106">lo que manda cuando haya un conflicto</text>
+<text x="545" y="132">AUTORIDAD</text><text font-weight="400" x="655" y="132">decide solo · se detiene en 3 casos</text>
+<text x="545" y="158">LISTO</text><text font-weight="400" x="655" y="158">la prueba que aplicas antes de aceptar</text>
+<text x="545" y="184">VERIFICACIÓN</text><text font-weight="400" x="655" y="184">evidencia antes de declarar que está listo</text>
+<text fill="#3b2300" font-size="11" font-weight="400" x="545" y="212">el «cómo» queda en manos del modelo · el esfuerzo se convierte en el botón de costo</text>
+</g>
+<text fill="#fcd9a0" font-size="11" text-anchor="middle" x="740" y="258">los 5 pilares siguen vigentes: cambia su forma</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Menos pasos, más intención. Lo que era una muleta se volvió ruido.</p>
+</div>
+<!-- exemplo pronto -->
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — La misma tarea, dos generaciones</h3>
+<p class="text-sm text-neutral-400 italic mb-3">El dueño de una tienda de comercio electrónico pide un informe semanal de ventas para que la IA lo elabore a partir de la hoja de cálculo.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Escrito para 2025</h4>
+<p class="text-sm text-neutral-300">Eres un analista sénior. Primero abre la hoja de cálculo. Después enumera todas las columnas. Luego calcula el total por categoría. Después calcula la variación. No inventes números. Muestra tu razonamiento paso a paso. Antes de escribir el informe, pregúntame si la estructura está bien. Usa viñetas. Sé conciso. No uses jerga. Revísalo dos veces.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Escrito para sep/2026</h4>
+<p class="text-sm text-neutral-300">RESULTADO: informe semanal de ventas de 1 página para el dueño, quien decide qué reponer el lunes por la mañana. FUENTE DE VERDAD: la hoja de cálculo vendas-semana.xlsx; si un número no cuadra, señala la discrepancia en vez de estimarlo. AUTORIDAD: tú decides la estructura y el formato; pregunta solo si falta un dato que cambie la decisión de reposición. LISTO: los totales por categoría coinciden con la suma de la hoja de cálculo, variación respecto de la semana anterior, 3 artículos con una acción sugerida. VERIFICACIÓN: antes de entregar, comprueba cada total con la fuente e indica qué no pudiste comprobar.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> El primero marca el camino y además pide permiso a mitad del proceso: con un Astra vuelve con una pregunta; con un Fable, con un razonamiento narrado que nadie pidió. El segundo no dice <em>cómo</em>: dice qué queda listo, qué prevalece, hasta dónde llega por sí solo y cómo comprobarlo. El modelo nuevo completa la tarea; al antiguo había que guiarlo.</p>
+</div>
+<!-- fazer / evitar -->
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Tratar cada cambio de generación como un detonante para volver a auditar lo que escribiste.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Describir la intención (resultado, límites, listo) en vez del camino.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Lee la guía oficial del modelo que usas antes de reescribir cualquier cosa.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Concluir que «el prompt se acabó»: lo que se acabó fue el prompt de pasos.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Responder a un error del modelo nuevo con otra regla más, apilada sobre las demás.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Copiar el prompt que funcionaba y culpar al modelo cuando se detiene o pregunta.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Toma el prompt o documento de sistema que más usas y cuenta cuántas líneas empiezan con «siempre», «nunca», «antes de», «después de» o «primero». Esa es tu deuda de 2025. Hoy vas a pagar buena parte de ella.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Muleta obedecida</h4><p class="text-xs text-neutral-400">Regla creada para contener un modelo débil. El modelo fuerte la cumple al pie de la letra y, por eso, termina costando calidad.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Errores opuestos, misma causa</h4><p class="text-xs text-neutral-400">Fable puede actuar más allá de lo que pediste; Astra puede detenerse pronto y preguntar. En ambos casos, el modelo obedece al texto, no a la intención.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Los pilares cambian de forma</h4><p class="text-xs text-neutral-400">Contexto → fuente de verdad · Objetivos → resultado + criterio de listo · Reglas → límites · Memoria → archivo de lecciones · Validación → verificación con evidencia.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Todo tiene fecha</h4><p class="text-xs text-neutral-400">Los datos de este día son válidos al 5/set/2026. El método (volver a auditar en cada generación) es lo que perdura.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 2 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-2" id="topico-2">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">2</span>
+<h2 class="text-2xl font-bold">➖ Ingeniería por sustracción</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t2-p1">Escribir para la nueva generación es, ante todo, un ejercicio de <strong class="text-amber-400">borrar</strong>. No porque las instrucciones hayan dejado de importar, sino porque ahora cada línea se toma en serio. Una línea inútil ya no se ignora: se obedece y ocupa el lugar de una línea que sí importaba.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p2">El criterio para decidir es una sola pregunta, hecha línea por línea: <strong class="text-amber-400">“¿el modelo que uso hoy todavía necesita esto?”</strong> Si la línea existe porque un modelo de 2024 se olvidaba de ejecutar pruebas y el de 2026 las ejecuta sin que se lo pidas, se elimina. Si existe porque la acción es realmente peligrosa (borrar datos, publicar en producción, gastar dinero), se mantiene y recibe el nombre correcto: frontera, no paso.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p3">Los objetivos de recorte más comunes, según las guías de ambas empresas: (1) <strong class="text-amber-400">rituales obligatorios</strong> ("lee toda la documentación antes de hacer cualquier cambio"); (2) <strong class="text-amber-400">recordatorios de lo obvio</strong> ("ejecuta las pruebas", "no inventes"); (3) <strong class="text-amber-400">“pide permiso”</strong> genérico, creado después de un susto con un modelo antiguo; (4) <strong class="text-amber-400">reglas de formato</strong> en ambos sentidos: Fable 5.1 ya usa menos negrita y listas que las versiones anteriores, así que «nunca uses viñetas» hoy elimina una estructura que haría falta; (5) <strong class="text-amber-400">“muestra tu razonamiento”</strong> — en Fable esto incluso puede activar una negativa por extracción del razonamiento; si necesitas ver el progreso, pide actualizaciones del progreso, no la transcripción del pensamiento.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p4">Las Skills y los archivos de instrucciones del proyecto (CLAUDE.md, AGENTS.md) sufren el mismo problema, con un agravante: son globales. Una línea deficiente allí contamina todas las tareas. La recomendación de la guía de Codex es directa: descripciones de skills breves y con <strong class="text-amber-400">un disparador específico</strong> ("úsala al revisar un archivo de migración de base de datos, no para consultas generales") en lugar de "úsala siempre que haya algo relacionado con bases de datos". Las skills que se superponen se consolidan; las que vuelcan todo el flujo se convierten en un enrutador con los detalles en un archivo aparte.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p5">Sustraer no significa quedarse sin nada. La regla de la guía de Fable es: una <strong class="text-amber-400">instrucción breve de intención</strong> reemplaza la lista de comportamientos. En vez de enumerar "no hagas un PR largo, no comentes línea por línea, no listes opciones que no vas a seguir", se escribe una frase: "Empieza por el resultado; los detalles y la justificación vienen después; para acortar, elimina lo que no cambie la decisión del lector, no lo comprimas en fragmentos." El modelo generaliza.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p6">¿Y qué ocupa el lugar de lo que salió? <strong class="text-amber-400">Permisos explícitos para flujos seguros y repetibles</strong>. «Las pruebas locales usan datos descartables y no tocan producción: ejecútalas, corrige lo que haya roto el cambio y vuelve a ejecutarlas sin pedir aprobación en cada paso». Eso es lo contrario de una muleta: en vez de frenar, da libertad dentro de una barrera que tú diseñaste.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t2-p7">Un detalle que cambia la forma de probar: ambas casas dicen que el mismo prompt <strong class="text-amber-400">se comporta de forma diferente en cada nivel de esfuerzo</strong> y en cada generación. Entonces, la auditoría no termina con el corte: termina ejecutando el caso real después del corte y comparándolo con el de antes. Restar sin volver a ejecutar es hacer conjeturas.</p>
+</div>
+<!-- checklist de auditoria -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Lista de verificación de auditoría por sustracción</h3>
+<div class="grid sm:grid-cols-2 gap-3 mb-6">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Rituales</h4><p class="text-xs text-neutral-400">Exige leer la documentación o el mapa del repositorio antes de <em>toda</em> cambio, sin importar el tamaño de la tarea? Borra la regla general; deja que el modelo decida qué leer.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Recordatorios de lo obvio</h4><p class="text-xs text-neutral-400">¿Todavía le pides que ejecute pruebas que el modelo ya ejecuta por su cuenta? Borra el recordatorio. Si no las ejecuta, el problema es el permiso, no el recordatorio.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">“Pregunta antes”</h4><p class="text-xs text-neutral-400">¿La regla existe porque la acción es de alto riesgo o porque un modelo anterior se comportó mal? Solo se mantiene la primera, reescrita como límite (tema 3).</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Formato y razonamiento</h4><p class="text-xs text-neutral-400">“Nunca uses listas”, “usa siempre listas”, “explica tu razonamiento”: bórralo. Si hace falta, di <em>cuándo</em> un formato ayuda, y pide actualizaciones de progreso en vez de un pensamiento transcrito.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Skills</h4><p class="text-xs text-neutral-400">¿La descripción es más larga que el disparador? Acórtala. ¿Dos skills se activan con la misma tarea? Consolídalas. ¿La skill vuelca todo el flujo? Conviértela en un enrutador.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Permisos</h4><p class="text-xs text-neutral-400">¿Hay al menos un flujo seguro y repetible (pruebas locales, lint, build) con permiso explícito para ejecutarse sin detenerse? Si no, eso es lo que debe ocupar el lugar de lo que se quitó.</p></div>
+</div>
+<!-- exemplo pronto -->
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — Archivo de instrucciones del proyecto: muleta vs. permiso</h3>
+<p class="text-sm text-neutral-400 italic mb-3">Fragmento de un CLAUDE.md / AGENTS.md heredado de 2025 (adaptado de la guía del equipo de Codex).</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Muleta</h4>
+<p class="text-sm text-neutral-300">Antes de hacer cualquier cambio, lee el documento de arquitectura completo, la referencia de la API y la guía de pruebas. Después de cada cambio, ejecuta toda la suite de pruebas y espera la aprobación explícita antes de seguir con el siguiente paso.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Permiso con límites</h4>
+<p class="text-sm text-neutral-300">Las pruebas locales usan datos desechables y no tienen acceso a producción. Ejecútalas, corrige los fallos causados por el cambio solicitado y vuelve a ejecutar las pruebas afectadas sin pedir aprobación a cada paso. Detente y pregunta solo antes de hacer un deploy, una migración destructiva o una llamada externa que genere un cargo.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> La versión anterior exige leer todo y detenerse para pedir aprobación ante cualquier cambio, incluso los que ni siquiera afectan las pruebas. La nueva define el flujo seguro, permite actuar dentro de él y reserva la pausa para lo que realmente requiere intervención humana. El modelo termina la tarea en lugar de detenerse a cada instrucción.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Revisar la pregunta «¿el modelo de hoy todavía necesita esto?» línea por línea, en prompts, skills y archivos globales.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Sustituir las listas de comportamiento por una instrucción breve de intención.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Vuelve a ejecutar el caso real después del recorte y compáralo con el resultado anterior.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Borrar todo de una vez sin saber qué línea marcaba un límite real.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Mantener «muestra tu razonamiento»: en Fable puede generar una negativa; pide avances, no pensamientos.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Dejar reglas de formato antiguas («nunca uses viñetas») que hoy eliminan estructura útil.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Pídele al propio modelo que audite: "Lee este archivo de instrucciones. Para cada línea, di si harías eso por defecto sin la línea. Marca las que son límites de seguridad reales." Es bueno para eso, y la guía de Fable dice que actualiza las skills por su cuenta con lo que aprende en la tarea.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Pregunta clave</h4><p class="text-xs text-neutral-400">“¿El modelo que uso hoy todavía necesita esto?” Línea por línea. Se quita lo que era una muleta; se conserva lo que marca un límite.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Instrucción breve de intención</h4><p class="text-xs text-neutral-400">Una frase de intención reemplaza la lista de comportamientos. El modelo generaliza a partir del porqué.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Permiso con límites</h4><p class="text-xs text-neutral-400">Qué ocupa el lugar de la muleta: un flujo seguro y definido, autorizado de principio a fin, con la interrupción reservada para lo que requiere intervención humana.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Se cortó, vuelve a ejecutar</h4><p class="text-xs text-neutral-400">El comportamiento cambia según la generación y el nivel de esfuerzo. La auditoría solo termina cuando vuelves a ejecutar el caso real.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 3 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-3" id="topico-3">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">3</span>
+<h2 class="text-2xl font-bold">🚧 Fronteras, no pasos</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t3-p1">El día 2, el pilar Reglas respondía «qué no puede hacer la IA». En la nueva generación responde una pregunta más precisa: <strong class="text-amber-400">hasta dónde decide por su cuenta y en qué situación exacta se detiene y te llama</strong>. Es el pilar Autoridad. Quedarse corto bloquea el trabajo; excederse genera acciones que nadie pidió.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p2">Los dos modelos nuevos muestran los dos lados del error. Según la guía oficial, Fable «puede realizar ocasionalmente acciones que no se le pidieron»: redactar un correo que nadie pidió, crear una copia de seguridad por precaución, corregir un error cercano que la tarea no mencionaba. Astra hace lo contrario: <strong class="text-amber-400">“respeta tus límites y puedes detenerte aunque preferirías continuar”</strong>, en la descripción del equipo de Codex. Una barrera escrita para corregir un modelo desobediente se convierte, en un modelo obediente, en una pausa indeseada.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p3">La solución no es borrar los límites ni multiplicarlos: es <strong class="text-amber-400">redefinir el alcance</strong>. La guía de Fable resume en una frase lo que un prompt de 2025 decía en veinte: «Detente para consultar al usuario solo cuando el trabajo realmente lo requiera: una acción destructiva o irreversible, un cambio real de alcance o un dato que solo él tiene. Si te encuentras con uno de esos casos, pregunta y termina el turno, en vez de terminar con una promesa». Son las <strong class="text-amber-400">tres paradas</strong>. Todo lo que no sea una de ellas —acciones reversibles que se desprenden del pedido— sigue adelante sin preguntar.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p4">Por el lado de Astra, la instrucción reflejada: <strong class="text-amber-400">“infiere la intención a partir de lo que ya tienes, enumera tus suposiciones al principio y continúa basándote en ellas”</strong>. Fíjate en que no dice «nunca preguntes»: eso obliga a adivinar cuando falta una decisión real. Se trata de redirigir la pregunta: en vez de detenerse, el modelo declara lo que asumió y continúa. Tú mantienes la visibilidad sin que el trabajo se trabe. Las guías también sugieren dejar explícito que las acciones de lectura, revisión y las reversibles ya tienen autorización implícita.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p5">Por el lado de Fable, también está el límite contra el exceso de la guía oficial: «Si, al trabajar, encuentras un bug preexistente o un comportamiento que la tarea no menciona, <strong class="text-amber-400">no corrijas ni amplíes en este cambio</strong>; repórtalo como pendiente en el resumen. Cuando la tarea sea ambigua, implementa la interpretación que mejor respalde el texto, declara la suposición y no construyas para las otras interpretaciones." Y la distinción que vale oro en operaciones: cuando el usuario está <em>describiendo</em> un problema o pensando en voz alta, el entregable es la evaluación: repórtala y detente; no apliques la corrección antes de que te la pidan.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p6">Hay una segunda razón para escribir las fronteras con cuidado, y es la seguridad. Una lectura de terceros que circuló esta semana lo resume bien: <strong class="text-amber-400">“un prompt representa una intención; un permiso representa una imposición”</strong>. Cuanto más potente es el modelo, menos sirve «el prompt dijo que no lo hiciera» como control. Los límites de alto riesgo (deploy, borrar, pagar) también deben existir fuera del texto: en los permisos de la herramienta, el acceso y el entorno. El prompt indica dónde parar; el entorno lo garantiza.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t3-p7">La prueba del pilar Autoridad es sencilla: lee tu lista de reglas y clasifica cada una como <strong class="text-amber-400">detención</strong> (una de las tres), <strong class="text-amber-400">permiso</strong> (flujo seguro habilitado) o <strong class="text-amber-400">muleta</strong> (regla que existe por un modelo antiguo). La primera se queda y obtiene una garantía en el entorno. La segunda se queda y da libertad. La tercera se elimina.</p>
+</div>
+<!-- SVG B: zona de autonomia -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="Zona de autonomía: las acciones reversibles siguen sin preguntar; tres límites detienen al modelo: una acción destructiva o irreversible, un cambio real de alcance, información que solo el usuario tiene." class="w-full h-auto" role="img" viewbox="0 0 1000 260">
+<defs>
+<pattern height="32" id="d4b-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4b-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4b-grid)" height="260" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif">
+<rect fill="#12210f" height="180" rx="18" stroke="#34d399" stroke-width="2.5" width="560" x="40" y="40"></rect>
+<text fill="#6ee7b7" font-size="15" font-weight="700" text-anchor="middle" x="320" y="72">ZONA DE AUTONOMÍA — sigue sin preguntar</text>
+<g fill="#d1fae5" font-size="12">
+<text x="70" y="104">• leer, buscar, revisar, comparar</text>
+<text x="70" y="128">• acciones reversibles derivadas de la solicitud</text>
+<text x="70" y="152">• decisiones de estructura, formato y orden</text>
+<text x="70" y="176">• flujos seguros definidos (pruebas locales, lint, build)</text>
+<text fill="#a7f3d0" font-style="italic" x="70" y="200">suposiciones declaradas al principio, no preguntadas</text>
+</g>
+<line marker-end="url(#d4b-ah)" stroke="#fbbf24" stroke-width="2.5" x1="600" x2="660" y1="130" y2="130"></line>
+<g font-size="12" font-weight="600">
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="46"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="66">PARADA 1</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="83">destructivo o irreversible</text>
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="107"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="127">PARADA 2</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="144">cambio real de alcance</text>
+<rect fill="#2a1414" height="46" rx="10" stroke="#ef4444" stroke-width="2" width="290" x="670" y="168"></rect><text fill="#fecaca" text-anchor="middle" x="815" y="188">PARADA 3</text><text fill="#fca5a5" font-size="11" font-weight="400" text-anchor="middle" x="815" y="205">información que solo tú tienes</text>
+</g>
+<text fill="#fcd9a0" font-size="11" text-anchor="middle" x="500" y="246">detención = pregunta y termina el turno · nunca termina con una promesa («después lo hago…»)</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Tres puertas. Todo lo demás es zona de autonomía.</p>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — Reglas de carpintería: prohibiciones vs. autoridad</h3>
+<p class="text-sm text-neutral-400 italic mb-3">El pilar Reglas del sistema de atención del día 3, reescrito para la nueva generación.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Reglas de 2025</h4>
+<p class="text-sm text-neutral-300">Nunca respondas sin consultarme. Muéstrame siempre el borrador antes de enviarlo. No tomes ninguna decisión por tu cuenta. No incluyas precios por correo electrónico. No propongas plazos menores de 30 días. Si tienes dudas, pregunta. Confirma conmigo cada cita.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Autoridad de 2026</h4>
+<p class="text-sm text-neutral-300">DECIDE POR SU CUENTA: tono, estructura de la respuesta, qué preguntas de calificación hacer, proponer hasta 3 fechas de visita de la agenda disponible. Si falta un dato que no cambia el precio ni el plazo, asume el valor predeterminado y declara la suposición en el registro. SE DETIENE Y ME LLAMA en 3 casos: (1) el cliente pide un reembolso o una cancelación (irreversible); (2) el pedido está fuera del alcance —reparación, otra ciudad, plazo inferior a 30 días (cambio de alcance)—; (3) precio o descuento: solo yo tengo esa información. LÍMITES FIJOS: nunca menciona un precio; nunca promete un plazo inferior a 30 días. GARANTÍA: el asistente no tiene acceso al sistema de pagos ni a la agenda de producción.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> La versión anterior pide consultar todo: en Astra, el asistente se detiene literalmente con cada mensaje; en Fable, ignora el espíritu de las instrucciones e improvisa. La nueva indica qué decide por su cuenta, define los tres puntos de parada y además elimina del texto la garantía que sí importa (sin acceso a pagos). Funciona en ambos modelos porque describe la autoridad, no los pasos.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Clasificar cada regla como límite, permiso o muleta, y actuar en consecuencia.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Escribir las tres pausas con ejemplos de tu caso y liberar explícitamente el resto.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Pedir que las suposiciones se declaren al inicio en vez de hacer preguntas.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Asegura también la frontera de alto riesgo en el entorno (acceso, permiso), no solo en el texto.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Nunca preguntes nada” — obliga a adivinar cuando falta una decisión real.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Consúltame siempre” — bloquea a Astra y Fable lo ignora en la práctica.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confiar en que «el prompt indicó que no lo hiciera» evitará una acción irreversible.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Aceptar un turno que termina en una promesa ("enseguida hago X") en vez de hacerlo o preguntar.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Para cada «pregunta antes» que quedó, escribe al lado cuánto cuesta que el modelo se detenga ahí 20 veces al día. Si el costo de detenerse es mayor que el costo del error que evita la regla, es una muleta. Si el error es irreversible, es una parada; en ese caso, asegúrate de garantizarla fuera del texto.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Pilar de autoridad</h4><p class="text-xs text-neutral-400">Evolución del pilar Reglas: hasta dónde decide el modelo por sí solo y en qué situación exacta se detiene y te llama.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Las tres paradas</h4><p class="text-xs text-neutral-400">Destructivo/irreversible · cambio real de alcance · información que solo tú tienes. Detente: pregunta y termina, sin prometer nada.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Supuesto declarado</h4><p class="text-xs text-neutral-400">En vez de preguntar, el modelo enumera lo que asumió y continúa. Visibilidad sin bloqueo: el antídoto para que Astra no se detenga antes de tiempo.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Intención ≠ imposición</h4><p class="text-xs text-neutral-400">El prompt indica dónde detenerse; los permisos y el acceso lo garantizan. Cuanto más potente es el modelo, menos sirve "le dije que no lo hiciera" como control.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 4 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-4" id="topico-4">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">4</span>
+<h2 class="text-2xl font-bold">🏁 Definición de listo y verificación con evidencia</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t4-p1">Si el modelo se encarga del «cómo», la parte más valiosa de tu texto pasa a ser la <strong class="text-amber-400">línea de meta</strong>. Una guía sobre Astra lo resume así: «el mejor prompt define una línea de llegada: dice qué resultado producir, qué evidencia controla la respuesta, qué puede decidir por su cuenta, cómo se estructura el entregable y qué debe revisarse antes de terminar». Las dos últimas partes — <em>listo</em> e <em>verificación</em> — son lo que distingue un prompt que devuelve trabajo de uno que devuelve una pregunta.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p2"><strong class="text-amber-400">Definición de listo</strong> es la prueba que <em>tú</em> lo aplicarías antes de aceptar. No es «un buen informe»; es «los totales coinciden con la hoja de cálculo, variación respecto de la semana anterior, tres elementos con una acción». Escrita así, cumple tres funciones al mismo tiempo: le da al modelo el criterio para saber cuándo detenerse, evita que se detenga demasiado pronto (Astra) o que continúe de más (Fable), y se convierte en la lista de verificación para la validación del día 3 sin trabajo adicional.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p3"><strong class="text-amber-400">Verificación con evidencia</strong> aborda un problema que se hizo más visible precisamente porque ahora los modelos funcionan durante horas: el informe de progreso inventado. La guía de Fable incluye la instrucción que, en las pruebas de Anthropic, «prácticamente eliminó» esto: «Antes de informar sobre el progreso, audita cada afirmación comparándola con el resultado de una herramienta de esta sesión. Informa solo del trabajo para el que puedas señalar evidencia; si algo aún no se verificó, dilo explícitamente. Si las pruebas fallaron, dilo junto con el resultado; si se omitió un paso, dilo; cuando algo esté hecho y verificado, afírmalo sin reservas».</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p4">Hay un par de trampas nuevas. La primera, del lado de Astra: <strong class="text-amber-400">reconocer que podría hacerlo no significa haberlo hecho</strong>. Sin esto por escrito, a veces responde con un plan competente y se detiene. La segunda advertencia, de Fable 5.1: en tareas largas y asíncronas, puede terminar el turno describiendo el siguiente paso («después voy a…») o pidiendo permiso para algo que el pedido ya incluía («¿lo aplico?»). La guía oficial indica cómo cerrar: «Antes de terminar, vuelve a leer tu último párrafo. Si es un plan, una pregunta o una promesa sobre trabajo pendiente, haz ese trabajo ahora». Esto no aplica al trabajo en pareja en vivo: aplica cuando no estás mirando.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p5">Una verificación aún mejor es la que <strong class="text-amber-400">no la realiza quien la produjo</strong>. La guía de Fable es explícita: «los verificadores independientes, con contexto limpio, suelen superar a la autocrítica». En trabajos largos, la instrucción es establecer un ritmo: «Define un método para revisar tu propio trabajo cada [intervalo]; ejecútalo y compáralo con la especificación usando subagentes». Si no usas subagentes, el equivalente es el día 3: otra persona u otra sesión ejecuta la lista de verificación.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p6">Junta las piezas y tendrás la estructura que las guías de Astra llaman <strong class="text-amber-400">prompt de seis partes</strong>, y que es, en la práctica, nuestra Ficha del día 2 actualizada: Resultado · Fuente de verdad · Restricciones · Autoridad · Contrato de salida · Verificación. «Resultado» evita el análisis sin rumbo; «fuente de verdad» controla la evidencia; «restricciones» delimitan la solución; «autoridad» reduce las pausas innecesarias; «contrato de salida» hace que el resultado sea usable; «verificación» define cuándo está listo.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t4-p7">Una nota sobre las fuentes que sirve para cualquier cosa que use búsquedas: Fable 5.1, con un nivel de esfuerzo bajo, tiende a responder de memoria en vez de buscar. Cuando el tema cambia rápido (los modelos de IA son el ejemplo que da esta misma guía), indica que <strong class="text-amber-400">reconocer un nombre no significa conocer su estado actual</strong> y que debe buscar antes de responder. Es una definición de listo para la investigación: estar listo incluye haber verificado.</p>
+</div>
+<!-- SVG C: linha de chegada -->
+<div class="rounded-2xl border border-amber-500/30 bg-dark-900/40 p-3 sm:p-5 mb-8 overflow-hidden">
+<svg aria-label="El prompt de seis partes: Resultado, Fuente de verdad, Restricciones, Autoridad, Contrato de salida y Verificación, alineados hasta la meta, donde el modelo declara que terminó y aporta evidencia." class="w-full h-auto" role="img" viewbox="0 0 1000 230">
+<defs>
+<pattern height="32" id="d4c-grid" patternunits="userSpaceOnUse" width="32"><circle cx="1.3" cy="1.3" fill="#f59e0b" opacity="0.10" r="1.3"></circle></pattern>
+<marker id="d4c-ah" markerheight="10" markerwidth="10" orient="auto" refx="6.5" refy="4.5"><path d="M0,0 L8,4.5 L0,9 L2.4,4.5 Z" fill="#fbbf24"></path></marker>
+</defs>
+<rect fill="url(#d4c-grid)" height="230" width="1000" x="0" y="0"></rect>
+<g font-family="Inter,sans-serif" font-size="11" font-weight="600">
+<g>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="30" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="95" y="90">1. Resultado</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="95" y="108">qué, para quién</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="178" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="243" y="90">2. Fuente de verdad</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="243" y="108">lo que manda</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="326" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="391" y="90">3. Restricciones</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="391" y="108">límites fijos</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="474" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="539" y="90">4. Autoridad</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="539" y="108">decide · 3 paradas</text>
+<rect fill="#0e1b26" height="70" rx="10" stroke="#38bdf8" stroke-width="2" width="130" x="622" y="60"></rect><text fill="#bfe6ff" text-anchor="middle" x="687" y="90">5. Contrato de salida</text><text fill="#7dd3fc" font-size="10" font-weight="400" text-anchor="middle" x="687" y="108">formato del entregable</text>
+<rect fill="#1f1604" height="90" rx="12" stroke="#fbbf24" stroke-width="2.5" width="200" x="770" y="50"></rect><text fill="#fbbf24" font-size="13" text-anchor="middle" x="870" y="82">6. Verificación</text><text fill="#fcd9a0" font-size="10" font-weight="400" text-anchor="middle" x="870" y="102">listo = prueba que aplicas</text><text fill="#fcd9a0" font-size="10" font-weight="400" text-anchor="middle" x="870" y="118">evidencia antes de decir «listo»</text>
+</g>
+<g opacity="0.6" stroke="#38bdf8" stroke-width="1.6"><line x1="160" x2="176" y1="95" y2="95"></line><line x1="308" x2="324" y1="95" y2="95"></line><line x1="456" x2="472" y1="95" y2="95"></line><line x1="604" x2="620" y1="95" y2="95"></line></g>
+<line marker-end="url(#d4c-ah)" stroke="#fbbf24" stroke-width="2" x1="752" x2="766" y1="95" y2="95"></line>
+<g opacity="0.8" stroke="#fbbf24" stroke-dasharray="6 5" stroke-width="2"><line x1="970" x2="970" y1="40" y2="150"></line></g>
+<text fill="#fbbf24" font-size="10" text-anchor="middle" transform="rotate(90 985 98)" x="985" y="98">META</text>
+<text fill="#fcd9a0" font-weight="400" text-anchor="middle" x="500" y="185">“Reconocer que podrías hacerlo no significa que ya lo hayas hecho.” · “Si el último párrafo es un plan o una promesa, hazlo ahora.”</text>
+<text fill="#a7f3d0" font-weight="400" text-anchor="middle" x="500" y="206">verificador con contexto limpio &gt; autocrítica de quien lo produjo</text>
+</g>
+</svg>
+<p class="text-xs text-neutral-500 mt-3 text-center">Seis partes. Las dos últimas son las que devuelven trabajo en vez de preguntas.</p>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — Investigación de mercado: «haz un relevamiento» vs. meta final</h3>
+<p class="text-sm text-neutral-400 italic mb-3">Una consultora pide un análisis de competidores para una reunión de mañana.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Sin definición de listo</h4>
+<p class="text-sm text-neutral-300">Haz un análisis de los principales competidores de mi clienta (clínica de estética en Curitiba) con precios, ventajas diferenciales y puntos débiles. Sé exhaustivo y preciso.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Con definición de listo y verificación</h4>
+<p class="text-sm text-neutral-300">RESULTADO: tabla de 6–8 competidores de clínicas de estética en Curitiba para que se la presente mañana a la clienta. FUENTE DE VERDAD: sitios y perfiles oficiales de cada competidor, consultados hoy; si un precio no es público, escribe «no publicado», no lo estimes. AUTORIDAD: tú eliges qué competidores incluir y en qué orden; da por sentado que el barrio Batel es el radio de comparación y decláralo al principio; no me preguntes. CONTRATO DE SALIDA: tabla con nombre, barrio, 3 servicios con precio, una frase sobre el diferencial, una frase sobre el punto débil y el enlace a la fuente. LISTO: cada celda de precio tiene un enlace o dice «no publicado»; no hay ninguna clínica sin una fuente consultada hoy. VERIFICACIÓN: antes de entregar, vuelve a abrir cada enlace y confirma que el precio aparezca; enumera lo que no pudiste confirmar.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> “Completo y preciso” no se puede comprobar: Astra probablemente pregunta cuántos competidores y cuál es el radio; Fable, con un nivel de esfuerzo bajo, puede responder de memoria. La segunda versión define la meta, evita la pregunta con una suposición declarada y obliga a volver a consultar cada fuente antes de darlo por listo. El resultado es una tabla que puedes defender en una reunión.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Escribir «listo» como la prueba que tú mismo aplicarías antes de aceptar.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Exigir que cada afirmación de progreso apunte a una evidencia de la sesión.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Separar a quien produce de quien verifica (otra sesión, subagente, colega).</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>En trabajos que haces sin supervisión, termina con "si el último párrafo es una promesa, hazlo ahora".</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>“Sé completo y preciso” como criterio: no se puede comprobar, así que termina en una pregunta o una adivinanza.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Aceptar "terminado" sin señalar evidencia, en especial en rondas largas.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Confiar en la autocrítica del mismo modelo que lo produjo, en el mismo contexto.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Dejar la investigación con poco esfuerzo, sin la instrucción de buscar antes de responder.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Escribe la definición de listo antes del pedido, no después. Si no puedes escribirla en tres líneas comprobables, el problema no es el modelo: es que todavía no sabes qué quieres, y el nuevo modelo te devolverá esa duda en forma de pregunta.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Definición de listo</h4><p class="text-xs text-neutral-400">La prueba que aplicarías antes de aceptar. Le dice al modelo cuándo detenerse, evita que se detenga antes de tiempo o que continúe de más, y ya funciona como lista de validación.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Evidencia o nada</h4><p class="text-xs text-neutral-400">Cada afirmación de progreso apunta a un resultado real de la sesión. Lo que no esté verificado debe indicarse como no verificado.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Poder hacerlo ≠ haberlo hecho</h4><p class="text-xs text-neutral-400">Un plan competente no es una entrega. En el trabajo autónomo, el último párrafo no puede ser una promesa.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Prompt de seis partes</h4><p class="text-xs text-neutral-400">Resultado · Fuente de verdad · Restricciones · Autoridad · Contrato de salida · Verificación. Es la Ficha del día 2, actualizada.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 5 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-5" id="topico-5">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">5</span>
+<h2 class="text-2xl font-bold">🎚️ Esfuerzo, memoria y trabajo prolongado</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t5-p1">Cuando el modelo se ocupa del «cómo», te quedan tres botones que todavía controlas y que la generación anterior no tenía de la misma manera: <strong class="text-amber-400">cuánto piensa</strong> (nivel de esfuerzo), <strong class="text-amber-400">lo que recuerda entre rondas</strong> (memoria en archivo) y <strong class="text-amber-400">cómo te mantiene informado</strong> en trabajos que duran horas. Los tres sustituyen un montón de instrucciones antiguas.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p2"><strong class="text-amber-400">El esfuerzo es el control principal.</strong> Las dos casas usan la misma escala de cinco niveles —bajo, medio, alto, extra alto y máximo— y dicen lo mismo: es el botón que intercambia inteligencia por latencia y costo. En Fable 5.1, el nivel predeterminado es alto (en Claude Code) o medio (en el chat), y en nivel medio ofrece lo que Fable 5 ofrecía en alto, a menor costo. En nivel bajo, compite en costo con modelos más pequeños y obtiene mejores puntuaciones. La guía indica volver a probar la escala con cada generación: <em>el mismo nombre de nivel no significa la misma cantidad de razonamiento entre modelos</em>. Regla práctica de las guías de Astra: extracción y formato, en nivel bajo; redacción y cambios de rutina, en medio; varios archivos y análisis prolongado, en alto; refactorización amplia, en extra alto; decisiones de arquitectura que vas a ejecutar, en máximo.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p3">El esfuerzo alto tiene un efecto secundario conocido: en tareas rutinarias, Fable «puede recopilar contexto y deliberar más de lo que la tarea necesita» y sentirse tentada a arreglar lo que nadie pidió. La frase de la guía que controla esto reemplaza diez reglas: <strong class="text-amber-400">“No agregues funcionalidades, refactorices ni introduzcas abstracciones más allá de lo que exige la tarea. Haz lo más simple que funcione bien.”</strong> Si la tarea termina, pero tarda demasiado, baja el nivel de esfuerzo antes de modificar el prompt.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p4"><strong class="text-amber-400">Memoria se convierte en un archivo — y el modelo escribe en él.</strong> El pilar Memoria del día 2 era lo que guardabas para que la IA lo leyera. Ahora Fable «se desempeña especialmente bien cuando puede registrar lecciones de rondas anteriores y consultarlas». La instrucción oficial cabe en tres líneas: «Guarda una lección por archivo con un resumen de una línea al principio. Registra correcciones y enfoques confirmados, incluido por qué fueron importantes. No guardes lo que ya registran el repositorio o el historial; actualiza la nota existente en vez de duplicarla; elimina las notas que resulten ser incorrectas». Y para empezar: «Reflexiona sobre nuestras sesiones anteriores, identifica temas y lecciones y guárdalos en [carpeta]». Es el plan de mejora continua del día 3, solo que quien escribe el registro es el sistema.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p5"><strong class="text-amber-400">El trabajo largo requiere ritmo, no vigilancia.</strong> Fable 5.1 escribe <em>menos</em> actualizaciones durante las ejecuciones largas que Fable 5: el usuario ve al agente desaparecer durante minutos. La guía indica primero borrar las líneas antiguas que suprimían la narración («guárdalo todo para la respuesta final») y solo entonces pedir: «Antes de empezar, di en una línea qué vas a hacer; da actualizaciones breves mientras trabajas; termina con un resumen que se sostenga por sí solo». Para los agentes que funcionan sin supervisión, también existe la herramienta de «enviar al usuario», que entrega un mensaje intacto a mitad de la ejecución; pero el modelo rara vez la usa si el prompt no se lo indica.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p6"><strong class="text-amber-400">Delegar se volvió la norma.</strong> Fable envía subagentes en paralelo con más facilidad que las versiones anteriores; la guía recomienda usarlos con frecuencia, indicar cuándo conviene delegar y preferir la comunicación asíncrona: el orquestador sigue trabajando mientras ellos se ejecutan e interviene si alguno se desvía. Para ti, que quizá no configures ningún agente, la lección es la misma que el día 3: divide el sistema en etapas que puedan ejecutarse en paralelo y separa quién produce de quién verifica.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t5-p7">Por último, el dinero. La 5.1 redujo el precio de lectura de caché, y eso es lo que hace que el trabajo largo cueste hasta un 45% menos. Consecuencia práctica mencionada en la propia guía: compactar el historial temprano para ahorrar "puede que ya no sea la mejor opción"; prueba compactarlo más tarde. Y el viejo consejo del curso sigue vigente: el esfuerzo adecuado para la tarea es el mínimo que cumple con la definición de terminado. Ejecútala en dos niveles y compara con lo que se considera terminado; eso dice más sobre tu caso que cualquier benchmark.</p>
+</div>
+<!-- tabela de esforço -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Los cinco niveles de esfuerzo (regla práctica, set/2026)</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm text-left border border-dark-600 rounded-lg overflow-hidden">
+<thead class="bg-dark-800 text-neutral-300"><tr><th class="px-4 py-2.5 font-semibold">Nivel</th><th class="px-4 py-2.5 font-semibold">Sirve para</th><th class="px-4 py-2.5 font-semibold">Cuidado</th></tr></thead>
+<tbody class="divide-y divide-dark-600 text-neutral-300">
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">bajo</td><td class="px-4 py-2.5">extracción, formato, cambiar nombres, transcribir: una respuesta obvia</td><td class="px-4 py-2.5 text-neutral-400">Fable 5.1 busca menos y responde de memoria; pide buscar cuando el tema cambia rápido</td></tr>
+<tr><td class="px-4 py-2.5 text-amber-400 font-semibold">medio</td><td class="px-4 py-2.5">redacción, investigación rutinaria, cambios estándar, correo y documentos</td><td class="px-4 py-2.5 text-neutral-400">en 5.1 ≈ Fable 5 en alto, más barato; predeterminado en el chat</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">alto</td><td class="px-4 py-2.5">múltiples archivos, análisis de documentos extensos, investigación competitiva</td><td class="px-4 py-2.5 text-neutral-400">patrón de la 5.1 en Claude Code; punto de partida recomendado</td></tr>
+<tr><td class="px-4 py-2.5 text-amber-400 font-semibold">extra alto</td><td class="px-4 py-2.5">refactorización amplia, depurar lo que «alto» no resolvió, datos desordenados</td><td class="px-4 py-2.5 text-neutral-400">tendencia a ordenar lo que nadie pidió; usa la frase "lo más simple que funcione"</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 text-amber-400 font-semibold">máximo</td><td class="px-4 py-2.5">decisión de arquitectura, matemáticas difíciles, trade-off que vas a ejecutar</td><td class="px-4 py-2.5 text-neutral-400">puede «borradorear» todo el entregable mientras piensa y volver a escribirlo; deja espacio para tokens</td></tr>
+</tbody>
+</table>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — Memoria: base estática vs. archivo de lecciones</h3>
+<p class="text-sm text-neutral-400 italic mb-3">El pilar Memoria del asistente de la carpintería, antes y después.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Memoria de 2025</h4>
+<p class="text-sm text-neutral-300">Memoria: modelo de respuesta aprobado, lista de barrios atendidos, 10 preguntas de calificación. (Actualizada por el dueño cuando se acuerda. Nunca registra lo que salió mal.)</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Memoria de 2026</h4>
+<p class="text-sm text-neutral-300">Memoria base: la misma de antes. + CARPETA DE LECCIONES (la lees al inicio y escribes al final de cada ronda): una lección por archivo, resumen de una línea al principio; registra las correcciones que haga y los enfoques que confirme, con el motivo; no guardes lo que el catálogo o el historial ya dicen; actualiza en vez de duplicar; borra lo que resulte incorrecto. Lecciones de hoy: "un cliente del Centro preguntó el plazo 3× — responder el plazo en el 1.er mensaje" · "solicitud de reparación: rechazar indicando un socio, no limitarse a rechazar". ESFUERZO: medio para responder; alto solo cuando el caso llegue a una parada.</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> La memoria antigua es estática y depende de que su dueño la recuerde. La nueva es un loop: el sistema registra lo que aprendió, con una regla clara sobre qué entra y qué sale, y la siguiente atención ya empieza con más información. Es el plan de mejora continua del día 3 ejecutándose solo; además, el esfuerzo ajustado al tipo de caso reduce costos sin perder calidad.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Empezar con el nivel de esfuerzo estándar y probar el mismo caso un nivel más abajo; quedarse con el nivel más bajo que cumpla los requisitos.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Darle al sistema una carpeta de lecciones con reglas para incluirlas, actualizarlas y descartarlas.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Pedir actualizaciones periódicas durante un trabajo largo y borrar antes las líneas que suprimían la narración.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Ejecutar todo al máximo «para asegurarte»: cuesta más e invita a hacer ajustes que nadie pidió.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Reutilizar la calibración del esfuerzo de una generación en la siguiente sin volver a probarla.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Memoria sin reglas de descarte — se convierte en basura que el modelo obedece.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Crea hoy una carpeta "licoes/" junto a tu sistema y coloca en ella la primera lección: el error que corregiste el día 3, con el porqué. Después, haz que el sistema lea la carpeta al inicio de cada ronda. En dos semanas tendrás un registro que ningún prompt de 2025 tenía.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">El esfuerzo es el botón</h4><p class="text-xs text-neutral-400">Cinco niveles, la misma escala en ambas casas. El nivel más bajo que cumple los requisitos está listo. Vuelve a probarlo con cada generación.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Lo más sencillo que funcione</h4><p class="text-xs text-neutral-400">La frase que frena el exceso cuando el esfuerzo es alto: no agregues funcionalidad, refactorización ni abstracciones más allá de lo que exige la tarea.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Una lección por archivo</h4><p class="text-xs text-neutral-400">Memoria que el sistema lee y escribe, con reglas de entrada, actualización y descarte. El plan de mejora del día 3 funcionando solo.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Ritmo, no vigilancia</h4><p class="text-xs text-neutral-400">Una línea antes, actualizaciones breves durante el proceso, un resumen que se sostenga al final. En trabajos sin supervisión, un mensaje intacto a mitad de la ronda.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+<!-- ====================== TOPICO 6 ====================== -->
+<section class="mb-16" data-inema-topic="modulo-1-4#topico-6" id="topico-6">
+<div class="flex items-start justify-between gap-4 mb-5">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xl flex-shrink-0">6</span>
+<h2 class="text-2xl font-bold">🔁 Proyecto: migrar a la Ficha de Intención v2</h2>
+</div>
+<button aria-pressed="false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-600 text-neutral-300 hover:bg-dark-600 transition-colors text-sm flex-shrink-0" data-inema-doubt-toggle="" title="Marcar una duda en este tema" type="button"><span aria-hidden="true">?</span><span class="hidden sm:inline">Tengo una duda</span></button>
+</div>
+<div class="inema-prose">
+<p class="text-neutral-300 mb-5 leading-relaxed text-[15px] sm:text-base" data-inema-block="m1-4-t6-p1">Terminaste el día 3 con una Ficha del Sistema ejecutada y validada. Hoy no la vas a tirar a la basura: va <strong class="text-amber-400">migrar</strong>. Cada pilar de la Ficha v1 tiene un lugar en la Ficha de Intención v2, y la migración es precisamente el ejercicio que muestra qué era una muleta, qué era un límite y qué faltaba. Al final, ejecutas el mismo caso real en ambos formatos y los comparas: esa comparación demuestra que entendiste el cambio.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p2"><strong class="text-amber-400">Paso 1 — Audita por sustracción.</strong> Toma la Ficha v1 y el prompt/documento que ejecuta el sistema. Línea por línea, pregúntate: «¿el modelo de hoy todavía necesita esto?». Marca muletilla, límite o permiso. Borra las muletillas. Anota cuántas líneas eliminaste: esa es tu cifra de deuda pagada.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p3"><strong class="text-amber-400">Paso 2 — Reescribe Contexto como fuente de verdad.</strong> Del contexto del día 2, separa lo que es <em>autoritativo</em> (el catálogo, la tabla de plazos, la política) en lugar de limitarte a describirlos. Di qué fuente prevalece si hay un conflicto y qué hacer cuando falten datos: señalar la discrepancia, no inventar.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p4"><strong class="text-amber-400">Paso 3 — Convierte las Reglas en autoridad.</strong> Escribe qué decide el sistema por sí solo, las tres pausas con ejemplos de tu caso y los límites fijos que quedaron. Para cada pausa de alto riesgo, anota dónde se garantiza fuera del texto (acceso, permiso, entorno).</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p5"><strong class="text-amber-400">Paso 4 — Escribe Listo y Verificación.</strong> Tu checklist de validación del día 3 se convierte en la definición de listo: la prueba que aplicas antes de aceptar. Añade el requisito de evidencia ("reporta solo lo que puedas señalar; si no lo verificaste, di que no lo verificaste") y separa quién verifica de quién produce.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p6"><strong class="text-amber-400">Paso 5 — Ajusta el esfuerzo e instala la carpeta de lecciones.</strong> Elige el nivel de esfuerzo según el tipo de caso (rutina en medio, interrupción en alto, por ejemplo). Crea la carpeta de aprendizajes con la regla de entrada, actualización y descarte, y agrega el primer fallo corregido el día 3.</p>
+<p class="text-neutral-300 mb-4 leading-relaxed" data-inema-block="m1-4-t6-p7"><strong class="text-amber-400">Paso 6 — Ejecuta el mismo caso con los dos formatos y compáralos.</strong> Toma el caso real del día 3. Ejecútalo con la Ficha v1 y con la v2, de preferencia con el mismo modelo y, si puedes, con dos modelos (uno de Anthropic y otro de OpenAI). Anota: ¿preguntó o hizo? ¿Se detuvo donde debía? ¿Pasó la prueba de Listo? ¿Cuántas líneas de instrucciones usó? Esta tabla comparativa, junto con la Ficha v2 completada, es tu entrega del día 4.</p>
+</div>
+<!-- mapa de migracao -->
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">Mapa de migración — Ficha v1 (día 3) → Ficha de Intención v2</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm text-left border border-dark-600 rounded-lg overflow-hidden">
+<thead class="bg-dark-800 text-neutral-300"><tr><th class="px-4 py-2.5 font-semibold">Pilar (día 2/3)</th><th class="px-4 py-2.5 font-semibold">Se convierte en la v2</th><th class="px-4 py-2.5 font-semibold">Qué cambia en la escritura</th></tr></thead>
+<tbody class="divide-y divide-dark-600 text-neutral-300">
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Contexto</td><td class="px-4 py-2.5 text-amber-400">Fuente de verdad</td><td class="px-4 py-2.5 text-neutral-400">solo lo que es autoritativo; qué fuente prevalece; señalar las discrepancias en vez de inventar</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Objetivos</td><td class="px-4 py-2.5 text-amber-400">Resultado + Listo</td><td class="px-4 py-2.5 text-neutral-400">lo que queda listo, para quién y la prueba que aplicas antes de aceptar</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Reglas</td><td class="px-4 py-2.5 text-amber-400">Autoridad + Restricciones</td><td class="px-4 py-2.5 text-neutral-400">decide solo · 3 paradas · límites fijos · garantía fuera del texto</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Memoria</td><td class="px-4 py-2.5 text-amber-400">Base + carpeta de lecciones</td><td class="px-4 py-2.5 text-neutral-400">el sistema lee y escribe; una lección por archivo; regla de descarte</td></tr>
+<tr class="bg-dark-800/40"><td class="px-4 py-2.5 font-semibold">Validación</td><td class="px-4 py-2.5 text-amber-400">Verificación con evidencia</td><td class="px-4 py-2.5 text-neutral-400">cada afirmación señala evidencia; verificador independiente; el último párrafo no es una promesa</td></tr>
+<tr><td class="px-4 py-2.5 font-semibold">Flujo (día 3)</td><td class="px-4 py-2.5 text-amber-400">Contrato de salida + Esfuerzo</td><td class="px-4 py-2.5 text-neutral-400">el «cómo» queda en manos del modelo; tú defines el formato del entregable y el nivel de esfuerzo según el tipo de caso</td></tr>
+</tbody>
+</table>
+</div>
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Ejemplo listo — Carpintería: Ficha v1 vs. Ficha de Intención v2</h3>
+<p class="text-sm text-neutral-400 italic mb-3">El sistema de atención del día 3, migrado.</p>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-2">✗ Ficha v1 (funcionaba, pero con muletas)</h4>
+<p class="text-sm text-neutral-300">Contexto: carpintería a medida, plazo de 30 días, presupuesto solo después de la visita. Objetivo: agendar una visita. Reglas: sin precios; sin plazos &lt;30; rechazar reparaciones; confirmar la zona; <em>muéstramelo siempre antes de enviar; pregunta si tienes dudas</em>. Memoria: modelo, barrios, preguntas. Flujo: recibir → clasificar → calificar → redactar (el agente itera hasta aprobar o 2×) → validar → enviar/escalar. Validación: 6 elementos.</p>
+</div>
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-2">✓ Ficha de Intención v2</h4>
+<p class="text-sm text-neutral-300">RESULTADO: respuesta que agenda una visita técnica para quien escribe por correo electrónico. FUENTE DE VERDAD: tabla de plazos y lista de barrios (hoja de cálculo oficial); si el barrio no está en la lista, di que lo vas a confirmar; no lo des por sentado. AUTORIDAD: decide el tono, las preguntas y hasta 3 fechas; da por sentado el valor predeterminado para los datos que no cambian el precio ni el plazo, y decláralo; DETENTE ante reembolsos o cancelaciones, solicitudes fuera del alcance y cualquier mención de un valor. RESTRICCIONES: nunca menciones precios; nunca indiques un plazo &lt;30 días. CONTRATO DE SALIDA: correo electrónico de hasta 8 líneas, una pregunta de calificación, propuesta de fecha. LISTO: propone visita · sin precio · plazo 30 · región confirmada · tono cordial · 1 pregunta. VERIFICACIÓN: antes de enviar, comprueba cada punto de la lista de listo con la fuente; señala lo que no hayas comprobado. ESFUERZO: medio; alto si se activa una parada. MEMORIA: base + carpeta licoes/ (lee al inicio, escribe al final). LÍNEAS BORRADAS: 4 (mostrar antes, preguntar si hay dudas, iterar 2×, «nunca inventes»).</p>
+</div>
+</div>
+<p class="text-sm text-neutral-400 mt-3"><strong class="text-neutral-300">Por qué cambia:</strong> La v1 funcionaba con un modelo de 2025 porque necesitaba que le dibujaran el flujo. En la v2, el flujo desapareció: el modelo construye el camino, y lo que queda es una intención verificable: resultado, qué tiene prioridad, hasta dónde llega y cómo saber que está listo. Se eliminaron cuatro muletas; dos puntos de parada recibieron nombre; la memoria empezó a aprender. Al probarlo con el mismo caso del Centro, el nuevo modelo respondió el plazo y la región a la primera, sin preguntar ni improvisar.</p>
+</div>
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+<div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-emerald-400 mb-3">✓ Qué HACER</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Migrar pilar por pilar, conservando la v1 para comparar.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Ejecutar el mismo caso real en los dos formatos y registrar la comparación.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Contar las líneas borradas: esa es la métrica del cambio.</span></li>
+<li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span><span>Poner la fecha en la Ficha v2: lo que es válido hoy se volverá a auditar en la próxima generación.</span></li>
+</ul>
+</div>
+<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">
+<h4 class="font-semibold text-red-400 mb-3">✗ Qué EVITAR</h4>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Descartar la v1: es la línea de base para la comparación.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Migrar solo el texto y no ejecutar — restar sin volver a ejecutar es una conjetura.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Mantener el flujo paso a paso dentro de la v2 «por seguridad»: es la muleta que vuelve por la puerta trasera.</span></li>
+<li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>Declarar lista la migración sin completar la tabla comparativa.</span></li>
+</ul>
+</div>
+</div>
+<div class="bg-primary/10 rounded-xl border border-primary/30 p-5 mb-6">
+<h3 class="font-semibold text-primary mb-2 flex items-center"><span class="mr-2">💡</span>Consejo práctico</h3>
+<p class="text-neutral-300 text-sm">Si solo puedes probarlo con un modelo, hazlo de todos modos, pero con dos niveles de esfuerzo. Si puedes probarlo con dos modelos, verás en vivo el patrón de este día: la v1 hace que uno se detenga y el otro improvise; la v2 logra que ambos entreguen. Es la mejor lección sobre por qué la intención pasa de una herramienta a otra, pero los pasos no.</p>
+</div>
+<h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Conceptos clave</h3>
+<div class="grid sm:grid-cols-2 gap-3">
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Migrar, no desechar</h4><p class="text-xs text-neutral-400">Cada pilar de la v1 tiene un lugar en la v2. La migración revela qué era un apoyo temporal, un límite y qué faltaba.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">El flujo va al modelo</h4><p class="text-xs text-neutral-400">Fijas el formato del entregable y el esfuerzo; el modelo arma el camino. El flujo en la v2 es una muleta disfrazada.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Mismo caso, dos formatos</h4><p class="text-xs text-neutral-400">La comparación v1 × v2 en el caso real del día 3 es la prueba del cambio — y la entrega del día 4.</p></div>
+<div class="bg-dark-800 border border-dark-600 rounded-lg p-4"><h4 class="font-semibold text-amber-400 text-sm mb-1">Ficha con fecha</h4><p class="text-xs text-neutral-400">Lo que es válido en set/2026 se volverá a auditar en la próxima generación. El método permanece; los hechos vencen.</p></div>
+</div>
+<div class="flex justify-start mt-7">
+<button aria-pressed="false" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-semibold" data-inema-read-toggle="" type="button">
+<span aria-hidden="true" class="inema-ico-todo">○</span><span aria-hidden="true" class="inema-ico-done">●</span>
+<span class="inema-label-todo">Marcar como leído</span><span class="inema-label-done">Leído</span>
+</button>
+</div>
+</section>
+</article>
+<!-- ====================== EXERCICIOS ====================== -->
+<section class="mb-14">
+<h2 class="text-2xl font-bold mb-2">🛠️ Ejercicios prácticos</h2>
+<p class="text-neutral-400 mb-6 inema-prose">Hazlo con la Ficha del Sistema que preparaste el día 3. La respuesta modelo sigue el caso de la carpintería; lo que vale es tu caso.</p>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Ejercicio 1 — Auditoría por sustracción</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Separar las muletas, las fronteras y los permisos de lo que ya escribiste, y eliminar las muletas.</p>
+<p class="text-neutral-300 mb-4">Toma el prompt/documento que ejecuta tu sistema (o tu Ficha v1). Para cada línea que empieza con «siempre», «nunca», «antes de», «después de», «primero», «pregunta» o «muestra», responde: «¿el modelo que uso hoy todavía necesita esto?». Clasifícalas y cuéntalas.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Enumera todas las líneas de instrucciones de tu sistema, numeradas.</li>
+<li>Marca cada una como MULETA (existía por un modelo débil), LÍMITE (la acción sí es arriesgada) o PERMISO (habilita un flujo seguro).</li>
+<li>Borra las muletas. Anota cuántas quitaste.</li>
+<li>Para cada límite, escribe al lado en cuál de las tres paradas encaja.</li>
+<li>Si no quedó ningún permiso, escribe uno: un flujo seguro y repetible que quede autorizado por completo.</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">Ver la respuesta de ejemplo</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">SISTEMA: asistente de atención al cliente de la carpintería (Ficha v1).
+
+1. "Siempre muéstrame el borrador antes de enviarlo" → MULETA (se creó cuando el modelo anterior se equivocaba de tono). Se elimina.
+2. "Pregunta si tienes dudas" → MULETA (genérica; se convierte en "declara una suposición y sigue"). Se elimina.
+3. "Nunca menciones precios por correo" → FRONTERA · parada 3 (solo el dueño conoce el valor). Se mantiene.
+4. "Nunca prometas un plazo menor a 30 días" → RESTRICCIÓN fija. Se mantiene.
+5. "Rechaza las reparaciones con cortesía" → PERMISO (el modelo decide cómo). Se mantiene, con esta redacción: "fuera del alcance = parada 2; responde indicando un socio".
+6. "Repite el borrador hasta que pase o hasta 2 intentos" → MULETA (el modelo verifica por su cuenta contra lo esperado). Se elimina.
+7. "Nunca inventes información" → MULETA (se convierte en fuente de verdad: "si no está en la hoja de cálculo, di que lo vas a confirmar"). Se elimina como regla y se incorpora como fuente.
+8. "Confirma la zona antes de proponer una visita" → FRONTERA leve → se convierte en un punto del PRONTO.
+
+ELIMINADAS: 4 de 8. PERMISO NUEVO: "Tú decides el tono, las preguntas y hasta 3 fechas disponibles en la agenda sin consultarme."</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Consejo: Si dudas si una línea es una muleta o un límite, pregunta: «¿cuál es el peor caso si el modelo ignora esto?». Si el peor caso es reversible, es una muleta. Si es irreversible, cuesta dinero o lastima a alguien, es un límite.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Ejercicio 2 — Las reglas se convierten en Autoridad</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Reescribe el pilar Reglas como zona de autonomía + tres paradas + garantía fuera del texto.</p>
+<p class="text-neutral-300 mb-4">Con lo que quedó del Ejercicio 1, escribe el bloque AUTORIDAD de tu sistema en tres partes: qué decide por su cuenta (con ejemplos), los tres límites con un ejemplo concreto de tu caso para cada uno y dónde se garantiza cada límite de alto riesgo fuera del texto.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Escribe «DECIDE SOLO:» y enumera 3-5 decisiones que hoy tomabas por él.</li>
+<li>Escribe «DETENTE Y AVÍSAME:» con un ejemplo real para cada una de las tres pausas.</li>
+<li>Escribe la instrucción para hacer suposiciones: «si falta un dato que no cambia X ni Y, asume el valor predeterminado y decláralo».</li>
+<li>Para cada parada de alto riesgo, anota la GARANTÍA fuera del texto (acceso que no tiene, aprobación obligatoria en la herramienta).</li>
+<li>Vuelve a leer: ¿queda algún «consúltame siempre»? Si es así, vuelve al paso 1.</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">Ver la respuesta de ejemplo</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">AUTORIDAD — asistente de la carpintería
+
+DECIDE POR SU CUENTA: el tono y la estructura del correo; cuáles de las 10 preguntas de calificación usar (1 por correo); proponer hasta 3 fechas disponibles en la agenda; responder dudas sobre materiales con base en el catálogo; indicar un socio para la reparación.
+
+SUPOSICIÓN: si falta un dato que no cambia el precio ni el plazo (p. ej., color, acabado), asume el estándar del catálogo y decláralo en el registro: "asumí acabado mate".
+
+DETENTE Y AVÍSAME:
+- Parada 1 (irreversible): el cliente pide cancelar, solicitar un reembolso o modificar un pedido que ya está en producción.
+- Parada 2 (alcance): reparación pequeña, entrega fuera de la región metropolitana, plazo solicitado inferior a 30 días, proyecto de más de 20 m².
+- Parada 3 (solo yo lo sé): cualquier pregunta sobre precio, descuento o pago en cuotas.
+Al detenerte: responde al cliente que lo vas a confirmar y envíame el caso con la pregunta exacta. No termines con "después lo veo".
+
+GARANTÍA FUERA DEL TEXTO: el asistente no tiene acceso al sistema de pago, a la tabla de precios ni a la agenda de producción; solo a la agenda de visitas y al catálogo.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Consejo: La parte «DECIDE SOLO» suele ser la más difícil de escribir, porque exige admitir lo que estabas reteniendo sin necesidad. Empieza por las decisiones en las que, durante los últimos 30 días, siempre aprobaste lo que propuso.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Ejercicio 3 — Definición de terminado y verificación</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Convertir la lista de verificación del día 3 en una definición de terminado comprobable, que exija evidencia y un verificador independiente.</p>
+<p class="text-neutral-300 mb-4">Reescribe tu lista de verificación como LISTO (la prueba que aplicas antes de aceptar) y agrega el bloque VERIFICACIÓN: cómo comprueba el modelo cada punto con la fuente, qué hace con lo que no pudo comprobar y quién verifica además de él.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Para cada elemento de la checklist, reescríbelo de manera que puedas responder sí/no al observar el resultado.</li>
+<li>Quita los adjetivos que no se pueden probar ("bueno", "completo", "preciso") y cámbialos por medidas.</li>
+<li>Escribe el requisito de evidencia: «reporta solo lo que puedas señalar; si no está verificado, dilo».</li>
+<li>Define un verificador independiente: otra sesión, otra persona o un subagente con contexto limpio.</li>
+<li>Agrega la frase de cierre para el trabajo autónomo: "si el último párrafo es un plan o una promesa, hazlo ahora".</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">Ver la respuesta de ejemplo</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">LISTO — respuesta al presupuesto de la carpintería (sí/no en cada elemento):
+[ ] propone una visita con al menos 1 fecha concreta
+[ ] no contiene ningún monto en R$ ni la palabra «descuento»
+[ ] menciona «30 días» como plazo de producción (no «aproximadamente» ni «3 semanas»)
+[ ] el barrio del cliente aparece en la lista de zonas atendidas O la respuesta dice «voy a confirmar si atendemos tu zona»
+[ ] exactamente 1 pregunta de calificación
+[ ] máximo 8 líneas; empieza con el nombre del cliente
+
+VERIFICACIÓN:
+- Antes de enviar, compara cada elemento anterior con la hoja de cálculo oficial (plazos y barrios) y con el texto de la respuesta. Marca «aprobado» solo aquello que puedas señalar. Si no pudiste comprobar el barrio, marca «no verificado» y usa la frase de confirmación.
+- Verificador independiente: los viernes, otra sesión (sin el historial de la semana) evalúa 5 respuestas enviadas con este LISTO y registra las fallas en licoes/.
+- Cierre: si tu última línea es «después confirmo el barrio» o «¿puedo enviarlo?», no termines: confirma o envíalo ahora; pregunta solo si se activa una de las tres paradas.</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Consejo: Una buena prueba para saber si LISTO se puede comprobar: pídele a alguien que no conozca el sistema que evalúe una respuesta usando solo la lista. Si necesita preguntarte «¿qué cuenta como cordial?», el elemento todavía es un adjetivo.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Ejercicio 4 — Esfuerzo y carpeta de lecciones</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Elegir el nivel de esfuerzo según el tipo de caso e instalar la memoria que escribe el sistema.</p>
+<p class="text-neutral-300 mb-4">Ejecuta un caso real de tu sistema con dos niveles de esfuerzo (el predeterminado y uno menos) y compara los resultados con el PRONTO. Después, crea la carpeta de lecciones con la regla para agregar, actualizar y descartar, y registra allí la primera lección.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Ejecuta el mismo caso con el nivel de esfuerzo predeterminado y uno menos. Anota: ¿pasó el PRONTO? ¿cuánto tardó? ¿cuánto costó (si se ve)?</li>
+<li>Fija el esfuerzo según el tipo de caso: rutina, caso que requiere detenerse, revisión semanal.</li>
+<li>Crea la carpeta de lecciones y escribe la regla: una lección por archivo, resumen al inicio, qué incluir, cuándo actualizar y cuándo borrar.</li>
+<li>Registra la primera lección: la falla corregida el día 3 y el motivo.</li>
+<li>Agrega al sistema: "lee la carpeta al inicio de cada ronda; al terminar, registra correcciones y confirmaciones".</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">Ver la respuesta de ejemplo</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">COMPARACIÓN DE ESFUERZO — caso «armario de cocina, Centro»:
+- alto: aprobó los 6 elementos; 41 s; respuesta de 7 líneas.
+- medio: aprobó los 6 elementos; 12 s; respuesta de 6 líneas.
+→ NIVEL DE ESFUERZO FIJADO: medio para la rutina; alto cuando el caso llegue a una parada (reembolso, fuera de alcance, monto); alto en la revisión del viernes.
+
+CARPETA licoes/ — REGLA (archivo 00-regra.md):
+Una lección por archivo, nombre corto, primera línea = resumen. Se incluye: corrección que hizo el dueño; enfoque que confirmó el dueño; fallo encontrado en la revisión del viernes; siempre con el motivo. No se incluye: lo que ya está en el catálogo, en la hoja de cálculo o en el historial del correo. Actualiza el archivo existente en vez de crear otro sobre el mismo tema. Borra lo que la revisión muestre que está mal.
+
+licoes/prazo-na-primeira-resposta.md:
+«Responder con un plazo de 30 días ya en el 1.er mensaje: el cliente del Centro lo preguntó 3× (día 3). Motivo: el plazo es la 2.ª consulta más común y evita idas y vueltas».
+
+INSTRUCCIÓN EN EL SISTEMA: «Al inicio de cada ronda, lee licoes/. Al terminar, registra en licoes/ las correcciones que hice y los enfoques que confirmé, siguiendo 00-regra.md».</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Consejo: Si el nivel inferior cumple con LISTO, quédate con él: la guía de Fable dice que los niveles bajo y medio en la 5.1 rinden más que el nivel alto en generaciones anteriores. Sube de nivel solo cuando un elemento de LISTO no apruebe, y anótalo como una lección.</p>
+</div>
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6 mb-5">
+<h3 class="text-lg font-semibold mb-2">Ejercicio 5 — Ficha de Intención v2 + comparación (proyecto del día)</h3>
+<p class="text-sm text-neutral-400 mb-3"><strong class="text-amber-400">Objetivo:</strong> Consolidar los ejercicios 1-4 en la Ficha de Intención v2 y demostrar el cambio ejecutando el mismo caso en los dos formatos.</p>
+<p class="text-neutral-300 mb-4">Completa la Ficha de Intención v2 (plantilla abajo) para tu sistema. Ejecuta el caso real del día 3 con la Ficha v1 y con la v2, y completa la tabla comparativa. Si puedes, ejecútalo con dos modelos. Esta es tu entrega del día 4.</p>
+<ol class="list-decimal list-inside space-y-1.5 text-sm text-neutral-300 mb-2">
+<li>Completa los bloques: Resultado, Fuente de verdad, Restricciones, Autoridad, Contrato de salida, Terminado, Verificación, Esfuerzo, Memoria.</li>
+<li>Registra las «líneas borradas» (del Ejercicio 1) y la fecha de la Ficha.</li>
+<li>Ejecuta el caso real con la v1 y anota: ¿preguntó o lo hizo? ¿Se detuvo donde debía? ¿Pasó el PRONTO? ¿Cuántas líneas de instrucciones?</li>
+<li>Ejecuta el mismo caso con la v2 y anota las mismas cuatro cosas.</li>
+<li>Escribe una línea de conclusión: qué cambió la v2 en el comportamiento y qué siguió fallando (se convierte en aprendizaje).</li>
+</ol>
+<details class="mt-4 group">
+<summary class="cursor-pointer text-amber-400 font-medium">Ver la respuesta de ejemplo</summary>
+<div class="mt-3 bg-dark-700/50 rounded-lg p-4 text-sm text-neutral-300 whitespace-pre-line">FICHA DE INTENCIÓN v2 — Asistente de atención de la carpintería · 5/set/2026
+
+RESULTADO: correo que agenda una visita técnica para clientes que escriben por correo; el dueño decide la agenda de la semana con base en eso.
+FUENTE DE VERDAD: hoja de cálculo oficial (plazos, barrios, catálogo). Si falta un dato = "voy a confirmarlo", nunca una estimación.
+RESTRICCIONES: sin valores en R$; plazo nunca inferior a 30 días; hasta 8 líneas.
+AUTORIDAD: decide el tono, 1 pregunta, hasta 3 fechas; asume el estándar del catálogo en datos que no cambian el precio/plazo y lo declara. Se detiene ante: cancelación/reembolso · fuera del alcance · precio.
+CONTRATO DE SALIDA: correo listo para enviar + registro de 1 línea (suposiciones, punto de LISTO no verificado, si lo hay).
+LISTO: 6 elementos de sí/no (Ejercicio 3).
+VERIFICACIÓN: comprobar cada elemento con la fuente antes de enviar; indicar lo que no se haya verificado; revisión del viernes en una sesión aparte.
+ESFUERZO: medio (rutina) · alto (detención y revisión).
+MEMORIA: base + lecciones/ (lee al inicio, escribe al final, regla 00).
+LÍNEAS ELIMINADAS: 4.
+
+COMPARACIÓN — caso "armario de cocina, cuánto cuesta, Centro":
+                   v1 (día 3)                        v2 (día 4)
+¿Preguntó o lo hizo? Astra: preguntó "¿puedo enviarlo?"   Lo hizo; declaró "supuse que el acabado era mate"
+                   Fable: lo hizo, pero mencionó "3 semanas"
+¿Se detuvo donde debía? No se detuvo ante la mención del precio   Se detuvo: "voy a confirmar los valores" + caso enviado al dueño
+¿Pasó la prueba LISTO? 4/6                                 6/6
+Líneas de instrucciones: 14                                 9
+
+CONCLUSIÓN: la v2 logró que ambos modelos entregaran sin preguntar y se detuvieran en el momento adecuado (precio). Aún falló: en una 2.ª ronda, el modelo propuso una fecha feriada → nueva lección: "la agenda de visitas debe excluir los feriados" (se agrega a la fuente de verdad, no como regla).</div>
+</details>
+<p class="text-sm text-neutral-400 mt-4">💡 Consejo: La línea de conclusión es la parte más valiosa: te dice si la falla estaba en la intención (faltó decir qué) o en la fuente (faltaron datos). Casi nunca es falta de pasos. Si te descubres queriendo agregar un paso, vuelve al Ejercicio 1.</p>
+</div>
+</section>
+<!-- ====================== TEMPLATE ====================== -->
+<section class="mb-14">
+<div class="bg-gradient-to-br from-amber-900/20 to-dark-800 rounded-xl border border-amber-500/30 p-6 sm:p-8">
+<h2 class="text-2xl font-bold mb-2 flex items-center"><span class="mr-2">🧭</span>Ficha de Intención v2 + Tabla de comparación</h2>
+<p class="text-neutral-300 mb-6 inema-prose">La Ficha del Sistema del día 3, adaptada a la generación de sep/2026. Menos "cómo" y más "qué, hasta dónde y cómo saber que está listo". Completa una por sistema, ponle fecha y ejecuta el mismo caso en los dos formatos.</p>
+<div class="space-y-3">
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">Nombre del sistema · fecha de la Ficha · modelo(s) en los que se probó</div><div class="text-neutral-300 text-sm">Ejemplo: Asistente de atención al cliente de Marcenaria Cedro · 5/set/2026 · Fable 5.1 (médio) e GPT-6 Astra (médio)</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">RESULTADO (qué queda listo, para quién y para decidir qué)</div><div class="text-neutral-300 text-sm">Ejemplo: Correo que agenda una visita técnica para un cliente que escribe por correo; el dueño arma la agenda de la semana con eso</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">FUENTE DE VERDAD (qué es autoritativo · qué hacer cuando falta un dato)</div><div class="text-neutral-300 text-sm">Ejemplo: Hoja de cálculo oficial de plazos, barrios y catálogo. Si falta un dato = "voy a confirmarlo", nunca una estimación</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">RESTRICCIONES (límites fijos que quedaron después de la resta)</div><div class="text-neutral-300 text-sm">Ejemplo: Sin valores en R$; plazo nunca inferior a 30 días; hasta 8 líneas</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">AUTORIDAD — decide por su cuenta (3-5 elementos) · suposición declarada · tres paradas con ejemplo · garantía fuera del texto</div><div class="text-neutral-300 text-sm">Ejemplo: Decide el tono, 1 pregunta, hasta 3 fechas. Asume el estándar del catálogo y lo declara. Se detiene ante cancelación/reembolso · fuera del alcance · precio. Garantía: sin acceso a pagos ni a la tabla de precios</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">CONTRATO DE SALIDA (forma exacta del entregable)</div><div class="text-neutral-300 text-sm">Ejemplo: Correo listo + registro de 1 línea con suposiciones y puntos no verificados</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">LISTO (4-6 elementos de sí/no que aplicarías antes de aceptar)</div><div class="text-neutral-300 text-sm">Ejemplo: [ ] propone una visita con fecha; [ ] sin R$; [ ] "30 días" literal; [ ] barrio en la lista o "voy a confirmarlo"; [ ] 1 pregunta; [ ] hasta 8 líneas</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">VERIFICACIÓN (evidencia antes de concluir · verificador independiente · cierre sin promesas)</div><div class="text-neutral-300 text-sm">Ejemplo: Verificar cada elemento contra la fuente; decir qué no se verificó; revisión del viernes en una sesión aparte; el último párrafo nunca es «después yo…»</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">ESFUERZO (por tipo de caso)</div><div class="text-neutral-300 text-sm">Ejemplo: medio en la rutina · alto cuando se detiene · alto en la revisión semanal</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">MEMORIA (base + carpeta de lecciones con reglas de entrada, actualización y descarte)</div><div class="text-neutral-300 text-sm">Ejemplo: Base (modelo, barrios, preguntas) + licoes/ leída al inicio y escrita al final; regla en 00-regra.md</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">LÍNEAS ELIMINADAS en la resta (número + cuáles)</div><div class="text-neutral-300 text-sm">Ejemplo: 4 — «muestre antes de enviar», «pregunte si hay dudas», «itere 2×», «nunca invente»</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">TABLA DE COMPARACIÓN v1 × v2 (mismo caso real): ¿preguntó o hizo? · ¿se detuvo donde debía? · ¿cumplió con LISTO? · líneas de instrucción</div><div class="text-neutral-300 text-sm">Ejemplo: v1: preguntó / no se detuvo ante el precio / 4 de 6 / 14 líneas · v2: lo hizo declarando una suposición / se detuvo ante el precio / 6 de 6 / 9 líneas</div></div>
+<div class="bg-dark-800/60 rounded-lg p-4"><div class="text-amber-400 font-semibold text-sm mb-1">CONCLUSIÓN en 1 línea + nueva lección para licoes/</div><div class="text-neutral-300 text-sm">Ejemplo: La v2 hizo que ambos modelos entregaran y se detuvieran en el momento indicado; la falla restante (fecha en feriado) se incorpora a la fuente de verdad</div></div>
+</div>
+</div>
+</section>
+<!-- ====================== CHECAGEM ====================== -->
+<section class="mb-14">
+<div class="inema-check bg-dark-800 border border-dark-600 rounded-xl p-6" data-inema-check="modulo-1-4#q1">
+<p class="font-medium mb-4">Un modelo de la generación de set/2026 se detuvo a mitad de la tarea y preguntó «¿puedo continuar?» para un paso que el pedido ya contemplaba. ¿Cuál es la corrección más alineada con la Arquitectura de Intención?</p>
+<div class="inema-check-options space-y-2">
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="0" type="button">Agregar la regla "nunca hagas preguntas" al prompt</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="1" type="button">Reescribe la autoridad: qué decide por su cuenta, las tres paradas en las que debe detenerse y «declara las suposiciones y sigue» para lo demás</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="2" type="button">Detallar todos los pasos de la tarea para que no tenga dudas</button>
+<button class="block w-full text-left px-4 py-2.5 rounded-lg bg-dark-700 border border-dark-600 hover:bg-dark-600 transition-colors text-sm" data-inema-check-option="3" type="button">Subir el esfuerzo al máximo, porque con un esfuerzo alto no pregunta</button>
+</div>
+<div aria-live="polite" class="mt-4 text-sm" data-inema-check-feedback="" role="status"></div>
+</div>
+</section>
+<!-- ====================== FACILITADOR ====================== -->
+<section class="mb-14">
+<details class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<summary class="cursor-pointer font-semibold text-neutral-200">🎓 Para facilitar en vivo (modo presencial)</summary>
+<div class="mt-4 space-y-3 text-sm text-neutral-300">
+<p><strong class="text-amber-400">Tiempo total:</strong> 120 min.</p>
+<p><strong class="text-amber-400">Dinámica:</strong> Taller «A Virada» en parejas; cada pareja con acceso a un modelo de set/2026 (idealmente, una pareja con Fable y otra con Astra, para comparar). Apertura (15 min): el facilitador ejecuta en vivo el mismo prompt de pasos de 2025 en ambos modelos y muestra los errores opuestos: uno pregunta y el otro improvisa. Bloque 1 — Sustracción (25 min): cada participante audita su propia Ficha v1 línea por línea y anuncia cuántas líneas eliminó; el facilitador anota los números en el pizarrón. Bloque 2 — Autoridad y Listo (35 min): en parejas, uno escribe el bloque AUTORIDADE del otro a partir de lo que escucha; luego intercambian y escriben el PRONTO. Quien escribe para su compañero no conoce el sistema, lo que deja en evidencia los adjetivos que no se pueden probar en el momento. Bloque 3 — Ronda comparativa (30 min): cada quien ejecuta su caso real del día 3 con la v1 y la v2 y completa la tabla; las parejas con modelos distintos intercambian Fichas y vuelven a ejecutarlos. Cierre (15 min): cada pareja presenta una línea de la tabla comparativa y la nueva lección que agregó a licoes/. Cierre de la inmersión con la Ficha v2 fechada.</p>
+<p><strong class="text-amber-400">Materiales:</strong> Ficha v1 de cada participante (requisito previo, del día 3); Ficha de Intención v2 impresa en A3; tabla de comparación en A4; notas adhesivas de 3 colores (rojo = muleta, amarillo = frontera, verde = permiso); acceso a un modelo de set/2026 por pareja; las guías oficiales de prompting de ambas empresas abiertas en la pantalla; cronómetro.</p>
+<div>
+<p class="font-semibold text-neutral-200 mb-2">Preguntas para debatir:</p>
+<ul class="list-disc list-inside space-y-1.5 text-neutral-300">
+<li>¿Cuántas líneas borraste y cuál te resististe más a borrar? ¿Por qué?</li>
+<li>¿Cuál de las tres paradas fue más difícil de ejemplificar en tu caso? ¿Qué dice eso sobre el riesgo real de tu sistema?</li>
+<li>Cuando tu colega escribió tu LISTO sin conocer el sistema, ¿qué adjetivo imposible de probar apareció?</li>
+<li>En la tabla comparativa, ¿qué cambió: el comportamiento del modelo o la claridad de tu intención?</li>
+<li>Los hechos de este día cambian en la próxima generación. ¿Qué parte de tu método sobrevivirá y cómo sabrás cuándo es momento de volver a auditar?</li>
+</ul>
+</div>
+</div>
+</details>
+</section>
+<!-- ====================== FONTES ====================== -->
+<section class="mb-14">
+<div class="bg-dark-800 border border-dark-600 rounded-xl p-6">
+<h2 class="text-xl font-bold mb-2">📚 Fuentes consultadas</h2>
+<p class="text-sm text-neutral-400 mb-4">Válido el 5/set/2026. Las fuentes primarias (de los fabricantes) van primero; las demás son lecturas de terceros y están marcadas. Los comportamientos de Astra que se mencionan aquí provienen de las orientaciones de OpenAI, tal como las reproducen estas guías.</p>
+<ul class="space-y-2 text-sm text-neutral-300">
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Prompting Claude Fable 5</strong> (guía oficial): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5" rel="noopener" target="_blank">platform.claude.com/docs/…/prompting-claude-fable-5</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Prompting Claude Fable 5.1</strong> (guía oficial): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1" rel="noopener" target="_blank">platform.claude.com/docs/…/prompting-claude-fable-5-1</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>Anthropic — Introducing Claude Fable 5.1 and Claude Mythos 5.1</strong> (anuncio, 1/sep/2026): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.anthropic.com/claude-fable-and-mythos-5-1" rel="noopener" target="_blank">anthropic.com/claude-fable-and-mythos-5-1</a></span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">▸</span><span><strong>OpenAI — GPT-6 Astra System Card</strong> (principal): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://deploymentsafety.openai.com/gpt-6-astra" rel="noopener" target="_blank">deploymentsafety.openai.com/gpt-6-astra</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — explainx.ai, «GPT-6 Astra Skills &amp; AGENTS.md Prompting Guide» (resume la publicación del equipo de Codex del 5/sep/2026): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.explainx.ai/blog/gpt-6-astra-skills-agents-md-prompting-guide-2026" rel="noopener" target="_blank">explainx.ai/blog/gpt-6-astra-skills-agents-md-prompting-guide-2026</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — Elser AI, «GPT-6 Astra Prompt Guide» (prompt de seis partes): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://www.elser.ai/blog/gpt-6-astra-prompt-guide" rel="noopener" target="_blank">elser.ai/blog/gpt-6-astra-prompt-guide</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — lmspedia, «How to Prompt GPT-6 Astra: 12 Examples» (niveles de esfuerzo, hábito de preguntar): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://lmspedia.org/how-to-prompt-gpt-6-astra/" rel="noopener" target="_blank">lmspedia.org/how-to-prompt-gpt-6-astra</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — Ken Huang, «Claude Fable 5: What Changed, and How to Stop Prompting It Like Opus»: <a class="text-sky-400 hover:text-sky-300 break-all" href="https://kenhuangus.substack.com/p/claude-fable-5-what-changed-and-how" rel="noopener" target="_blank">kenhuangus.substack.com/p/claude-fable-5-what-changed-and-how</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — Pat McGuinness, «Claude Fable 5.1, GPT-6 Astra, and the New AI Model Stack» (panorama de los lanzamientos y las capacidades): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://patmcguinness.substack.com/p/claude-fable-51-gpt-6-astra-and-the" rel="noopener" target="_blank">patmcguinness.substack.com/p/claude-fable-51-gpt-6-astra-and-the</a></span></li>
+<li class="flex items-start gap-2"><span class="text-neutral-500 mt-0.5">▸</span><span><em>Terceros</em> — Wikipedia, «GPT-6 Astra» (fechas de lanzamiento): <a class="text-sky-400 hover:text-sky-300 break-all" href="https://en.wikipedia.org/wiki/GPT-6_Astra" rel="noopener" target="_blank">en.wikipedia.org/wiki/GPT-6_Astra</a></span></li>
+</ul>
+</div>
+</section>
+<!-- ====================== RESUMO ====================== -->
+<section class="mb-8">
+<div class="bg-gradient-to-br from-amber-900/40 via-dark-800 to-dark-800 rounded-xl border border-amber-500/30 p-8">
+<h2 class="text-2xl font-bold mb-6 flex items-center"><span class="mr-3">✅</span>Resumen del Día 4</h2>
+<ul class="space-y-3 text-neutral-200 mb-7">
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Set/2026 trajo Fable 5.1 y GPT-6 Astra: modelos que siguen instrucciones tan bien que los prompts con pasos se volvieron ruido. Los fabricantes dicen que hay que restar; los errores opuestos (actuar de más, detenerse demasiado pronto) tienen la misma causa: el modelo obedece al texto, no a la intención.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Ingeniería por sustracción: línea por línea, «¿el modelo de hoy todavía necesita esto?». Se va la muleta; queda el límite; entra el permiso con restricciones. Después de recortar, vuelve a ejecutarlo.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Las reglas se convierten en Autoridad: qué decide por sí sola, las tres pausas (irreversible, alcance, solo tú lo sabes), declarar una suposición en vez de preguntar, y la garantía de que el alto riesgo quede fuera del texto.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>Terminado es la prueba que aplicarías antes de aceptar; la verificación exige evidencia, un verificador independiente y un último párrafo que no sea una promesa. Poder hacerlo no significa haberlo hecho.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>El esfuerzo es el botón principal (cinco niveles, vuelve a probar en cada generación); la memoria se convierte en una carpeta de lecciones que el sistema escribe; el trabajo largo requiere un ritmo de actualizaciones, no vigilancia.</span></li>
+<li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">✓</span><span>La entrega es la Ficha de Intención v2 fechada, con el mismo caso real ejecutado en v1 y v2 y la tabla comparativa completa. Los hechos prevalecen; el método de volver a auditar en cada generación se mantiene.</span></li>
+</ul>
+<div class="bg-dark-900/50 rounded-lg border border-amber-500/20 p-5 mb-7">
+<h3 class="font-semibold text-amber-400 mb-2">Siguiente:</h3>
+<p class="text-sm text-neutral-300">Terminaste la inmersión con la Ficha v2 en tus manos. Anótalo en el calendario: cuando salga el próximo modelo (de cualquiera de las dos casas), vuelve a este día, repite el Ejercicio 1 y actualiza la fecha de la Ficha. Si la nueva generación requiere aún menos, borrarás más líneas; así sabrás que la Arquitectura de Intención está funcionando: cada vez que sube el modelo, tu texto se acorta y tu intención se vuelve más clara.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4">
+<a class="text-center px-6 py-3 bg-dark-700 hover:bg-dark-600 text-neutral-200 rounded-lg font-semibold transition-colors" href="dia-3.html">← Día 3</a>
+<a class="text-center px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors" href="index.html">Completar la inmersión ✓</a>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<footer class="border-t border-dark-600 py-8 mt-8">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-neutral-500 text-sm">
+<p>Arquitectura de Intención — una inmersión <a class="text-sky-400 hover:text-sky-300" href="https://inema.club" rel="noopener" target="_blank">INEMA.CLUB</a> · 2026</p>
+</div>
+</footer>
+<!-- SCRIPTS: nucleo v1 -->
+<script>
+    function toggleTopic(button) {
+      const topicItem = button.closest('.topic-item');
+      if (!topicItem) return;
+      const explanation = topicItem.querySelector('.topic-explanation');
+      const moduleCard = button.closest('.bg-dark-800') || document;
+      moduleCard.querySelectorAll('.topic-explanation.active').forEach(exp => { if (exp !== explanation) exp.classList.remove('active'); });
+      explanation.classList.toggle('active');
+      const expanded = explanation.classList.contains('active');
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.classList.remove('hidden'); document.body.style.overflow='hidden'; } }
+    function closeModal(){ document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); document.body.style.overflow='auto'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Toggle sol/lua → integra com inema.prefs (consistente entre paginas), com fallback v1.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.INEMA && INEMA.setPref && INEMA.getPrefs) {
+          var cur = INEMA.getPrefs().theme;
+          var next = (cur === 'claro' || cur === 'sepia') ? 'inema-dark' : 'claro';
+          INEMA.setPref('theme', next);
+        } else {
+          var html = document.documentElement;
+          html.classList.toggle('dark');
+          try { localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+          var di = document.getElementById('theme-toggle-dark-icon'), li = document.getElementById('theme-toggle-light-icon');
+          if (di && li) { var d = html.classList.contains('dark'); di.classList.toggle('hidden', !d); li.classList.toggle('hidden', d); }
+        }
+      });
+    })();
+  </script>
+<!-- Camada de aprendizagem v2 -->
+<script src="../assets/learn.js"></script>
+<script>
+    if (window.INEMA && typeof window.INEMA.init === 'function') { window.INEMA.init(); }
+    if (window.INEMA && INEMA.registerCheck) INEMA.registerCheck('modulo-1-4#q1', {
+      answer: 1,
+      explain: {
+        0: 'Errado — "nunca pergunte" força um chute onde falta uma decisão real. O guia recomenda definir o limiar, não proibir a pergunta.',
+        1: 'Correto — a parada indevida é um problema de autoridade mal escrita. Nomear o que ele decide sozinho, as três paradas e a suposição declarada resolve nos dois modelos, sem multiplicar regras.',
+        2: 'Errado — passo a passo é a muleta de 2025 voltando. A nova geração cuida do como; o que faltou foi intenção e fronteira, não roteiro.',
+        3: 'Errado — esforço regula quanto o modelo pensa, não se ele pergunta. Em esforço alto ele até tende a fazer mais do que foi pedido, o problema oposto.'
+      }
+    });
+  </script>
+</body>
+</html>
